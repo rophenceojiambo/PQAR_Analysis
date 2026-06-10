@@ -1,2 +1,1 @@
-# PQAR
-PQAR Summer 2026 Project
+# PQAR Summer 2026 Project
