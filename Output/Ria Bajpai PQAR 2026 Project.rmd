@@ -1,0 +1,92 @@
+---
+title: "PQAR 2026 Research Project"
+output: html_document
+date: "2026-06-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Installing necessary R packages
+```{r}
+  install.packages("gtsummary")
+  install.packages("flextable")
+  install.packages("broom")
+  install.packages("officer")
+  install.packages("mice")
+  install.packages("corrr")
+  install.packages("tibble")
+  install.packages("misty")
+  install.packages("haven")
+  install.packages("dplyr")
+```
+
+
+# Reading in data and creating new dataframe based on demographic characteristics
+```{r}
+  library(dplyr)
+  Canc_data <- readRDS("~/Desktop/Research_Project_PQAR/midus_cancer_aging_analysis_dataset.rds") #Canc_data: data from MIDUS cancer subproject
+  age <- Canc_data$age # Should we use both age and birth year?
+  race_ethn <- Canc_data$race_eth # Participant race and ethnicity
+  sex <- Canc_data$sex # Participant sex
+  mar_stat <- Canc_data$marital # Marital status
+  edu <- Canc_data$education # Education level
+  income <- Canc_data$income # Income
+  
+ # pt_id <- Canc_data$id # Participant MIDUS ID
+  
+  
+  # Create dataframe based on given variables
+  df1 <- data.frame(Age = age, Race_Ethnicity = race_ethn, Sex = sex, Marital_Status = mar_stat, Education = edu, Income = income)
+  df1
+```
+
+
+Create ‘Table 1' univariate statistics on the study population
+```{r}
+# Generate a basic summary table
+library(gtsummary)
+library(tidyverse)
+theme_gtsummary_journal(journal = "jama")
+df1 %>% # Relabel unknown --> missing, add mean instead of median, use label function to eliminate underscores/clean titles 
+  tbl_summary(missing_text = "Missing") %>% 
+  modify_caption("**Table I. Univariate Demographic Characteristics of MIDUS Participants**")
+
+```
+
+# Table 1 info cont.
+```{r}
+# Create a histogram
+histogram_plot <- df1 %>%
+  ggplot(aes(x = income)) +
+  geom_histogram(bins = 30, color = "white") +
+  labs(title = "Distribution of Income",
+       x = "Income", y = "Count") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))  # this centers the title
+
+# Show the plot in the notebook
+histogram_plot
+
+# Save the histogram as a PNG image
+ggsave("example_income_histogram.png", 
+       plot = histogram_plot, width = 7, height = 5, dpi = 300)
+```
+
+
+# Table 2
+```{r}
+library(gtsummary)
+library(tidyverse)
+# Generate a basic summary table
+theme_gtsummary_journal(journal = "jama")
+df1 %>% # add p-value column - cmd is add p / simulation of 2000 replicates
+  tbl_summary(
+  by = Race_Ethnicity
+  ) %>%
+  modify_caption("**Table II. Demographic Characteristics of MIDUS Participants by Race and Ethnicity**") # or table I ? 
+```
+
+## Table 3: combining tables 1 & 2 (using add function, will be the actual table 1 in the paper)
+
