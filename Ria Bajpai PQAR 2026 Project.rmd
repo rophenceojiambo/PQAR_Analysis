@@ -27,7 +27,7 @@ Installing necessary R packages
 ```{r}
   library(dplyr)
   Canc_data <- readRDS("~/Desktop/Research_Project_PQAR/midus_cancer_aging_analysis_dataset.rds") #Canc_data: data from MIDUS cancer subproject
-  age <- Canc_data$age # Should we use both age and birth year?
+  age <- Canc_data$age # Should we use both age and birth year? Just use Age --> Rophence
   race_ethn <- Canc_data$race_eth # Participant race and ethnicity
   sex <- Canc_data$sex # Participant sex
   mar_stat <- Canc_data$marital # Marital status
@@ -37,7 +37,7 @@ Installing necessary R packages
  # pt_id <- Canc_data$id # Participant MIDUS ID
   
   
-  # Create dataframe based on given variables
+  # Create dataframe based on given variables (Make sure you use all 14 variables as listed in the Dataset section of your syllabus -->Rophence)
   df1 <- data.frame(Age = age, Race_Ethnicity = race_ethn, Sex = sex, Marital_Status = mar_stat, Education = edu, Income = income)
   df1
 ```
