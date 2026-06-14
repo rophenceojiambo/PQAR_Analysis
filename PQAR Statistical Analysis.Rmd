@@ -1,0 +1,61 @@
+---
+title: "PQAR Statistical Analysis"
+author: "Rafaela Drake"
+date: "2026-06-12"
+output: html_document
+---
+
+```{r}
+#loading data (MIDUS Study)
+getwd()
+MIDUS_data <-readRDS("midus_cancer_aging_analysis_dataset.rds")
+View(MIDUS_data)
+dim(MIDUS_data)
+
+#Install and load packages: tidyverse, gtsummary, flextable, broom, officer, mice, corrr, tibble, misty
+library(tidyverse)
+library(gtsummary)
+library(flextable)
+library(broom)
+library(officer)
+library(mice)
+library(corrr)
+library(tibble)
+library(misty)
+
+#package used for Latex (knitting to PDF for Mac)
+library(tinytex)
+
+#data from each column (variable)
+univariate_stats <- MIDUS_data %>% select(grimage2:efficacy_STD)
+#adds label of what summary value is produced (dependent on data type)
+uni_labs <- setNames(
+  lapply(names(univariate_stats), function(v) {
+    if (is.numeric(univariate_stats[[v]])) paste0(v, ", mean (SD)")
+    else paste0(v, ", n (%)")
+  }),
+  names(univariate_stats)
+)
+#tblsummary() function to calculate values and make them into a table, digits = 3
+univariate_stats_table <- univariate_stats %>%
+  tbl_summary(
+    statistic = list(
+    all_continuous() ~ "{mean} ({sd})",
+    all_categorical() ~ "{n} ({p}%)"
+  ),
+  missing_text = "Missing",
+digits = all_continuous() ~ 1, #check what is the standard protocol for results
+label = uni_labs
+  ) %>%
+  modify_caption("Table I. MIDUS Study Univariate Statistics")
+#view table
+univariate_stats_table
+#ADD
+#Use function to export directly to word (package)
+#within gtsummary() there is a label command where we name everything with technical names 
+
+#Table 2
+#include p-values (add.p)
+#function add overall within table 2
+```
+
