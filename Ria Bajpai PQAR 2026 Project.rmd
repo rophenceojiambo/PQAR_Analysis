@@ -1,0 +1,163 @@
+---
+title: "PQAR 2026 Research Project"
+output: html_document
+date: "2026-06-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Installing necessary R packages
+```{r}
+  library("gtsummary")
+  library("flextable")
+  library("broom")
+  library("officer")
+  library("mice")
+  library("corrr")
+  library("tibble")
+  library("misty")
+  library("haven")
+  library("dplyr")
+  library("Hmisc")
+```
+Classification of variables:
+- Demographic information: age, sex, race/ethnicity, marital status, education, income
+- Physical considerations: smoking, number of chronic diseases, BMI, alcohol, family cancer history
+- Psychological considerations: efficacy
+- Biological data: dunedinpace, grimage2
+- Dependent variable of this study: cancer risk
+
+
+Reading in data and creating new dataframe based on demographic characteristics
+```{r}
+  project_dir <- getwd()
+  data_dir  <- file.path(project_dir, "Data")
+  output_dir  <- file.path(project_dir, "Output")
+  analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
+  library(dplyr)
+  Canc_data <- readRDS(analysis_path) #Canc_data: data from MIDUS cancer subproject
+  
+  # Setting variables for data table
+  age <- Canc_data$age 
+  sex <- Canc_data$sex 
+  edu <- Canc_data$education 
+  income <- Canc_data$income 
+  race_ethn <- Canc_data$race_eth 
+  mar_stat <- Canc_data$marital
+  bmi <- Canc_data$bmi
+  grimage2 <- Canc_data$grimage2_STD
+  dunedinpace <- Canc_data$dunedinpace_STD
+  num_chron <- Canc_data$num_chron
+  smoking <- Canc_data$smoking
+  alcohol <- Canc_data$alcohol
+  famcancer <- Canc_data$famcancer
+  cancerrisk <- Canc_data$cancerrisk
+  self_efficacy <- Canc_data$efficacy
+  
+  
+  # Create dataframe based on given variables
+  df1 <- data.frame(age, race_ethn, sex, mar_stat, edu, income, bmi, grimage2, dunedinpace, num_chron, smoking, alcohol, famcancer, cancerrisk, self_efficacy)
+  
+# Adding descriptive labels to data frame
+  library(labelled)
+  var_label(df1$age) <- "Age"
+  var_label(df1$sex) <- "Sex"
+  var_label(df1$mar_stat) <- "Marital Status"
+  var_label(df1$edu) <- "Education"
+  var_label(df1$income) <- "Income"
+  var_label(df1$bmi) <- "BMI"
+  var_label(df1$race_ethn) <- "Race and Ethnicity"
+  var_label(df1$grimage2) <- "GrimAge2"
+  var_label(df1$dunedinpace) <- "DunedinPACE"
+  var_label(df1$num_chron) <- "Number of Chronic Conditions"
+  var_label(df1$smoking) <- "Smoking Status"
+  var_label(df1$alcohol) <- "Alcohol Consumption"
+  var_label(df1$famcancer) <- "Family Cancer History"
+  var_label(df1$self_efficacy) <- "Self Efficacy"
+  var_label(df1$cancerrisk) <- "Perceived Cancer Risk"
+  colnames(df1) <- Hmisc::label(df1) # Assigning new labels to data frame
+  glimpse(df1) 
+```
+
+
+Create ‘Table 1' univariate statistics on the study population
+```{r}
+# Generate a basic summary table
+library(gtsummary)
+library(tidyverse)
+theme_gtsummary_journal(journal = "jama")
+table1 <-
+  df1 %>% 
+  select(-`Race and Ethnicity`) %>% # REMOVING race&ethn to make merging (table 3) easier
+  tbl_summary( 
+    statistic = 
+      list( 
+        all_continuous() ~ c("{mean} ({sd})"),
+        all_categorical() ~ "{n} ({p}%)" 
+        ), 
+     missing = "no",
+            ) %>%
+  modify_caption("**Table I. Univariate Demographic Characteristics of MIDUS Participants**") 
+
+  table1
+
+```
+
+
+Table 2
+```{r}
+library(gtsummary)
+library(tidyverse)
+# Generate a basic summary table
+theme_gtsummary_journal(journal = "jama")
+table2 <- 
+  df1 %>% # add p-value column - cmd is add p / simulation of 2000 replicates
+  tbl_summary(
+  by = `Race and Ethnicity`,
+  statistic = 
+        list( 
+          all_continuous() ~ c("{mean} ({sd})"),
+          all_categorical() ~ "{n} ({p}%)" 
+          ), 
+       missing_text = "Missing"
+               ) %>%
+  add_overall() %>%
+  add_p() %>%
+  modify_caption("**Table II. Demographic Characteristics of MIDUS Participants by Race and Ethnicity**")
+
+table2
+  
+```
+
+## Table 3: combining tables 1 & 2 (using add function, will be the actual table 1 in the paper)
+```{r}
+  age <- Canc_data$age 
+  sex <- Canc_data$sex 
+  edu <- Canc_data$education 
+  income <- Canc_data$income 
+  race_ethn <- Canc_data$race_eth 
+  mar_stat <- Canc_data$marital
+  bmi <- Canc_data$bmi
+  grimage2 <- Canc_data$grimage2_STD
+  dunedinpace <- Canc_data$dunedinpace_STD
+  num_chron <- Canc_data$num_chron
+  smoking <- Canc_data$smoking
+  alcohol <- Canc_data$alcohol
+  famcancer <- Canc_data$famcancer
+  cancerrisk <- Canc_data$cancerrisk
+  self_efficacy <- Canc_data$efficacy
+  
+library(gtsummary)
+# Merging both tables above: issue with a lot of white space underneath
+combined_table <- tbl_merge(
+  tbls = list(table1, table2),
+  tab_spanner = c("**Overall**", NA)
+)
+
+combined_table
+```
+
+# Export as word document
+
