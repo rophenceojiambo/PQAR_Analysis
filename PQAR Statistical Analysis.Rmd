@@ -8,9 +8,11 @@ output: html_document
 ```{r}
 #loading data (MIDUS Study)
 getwd()
-MIDUS_data <-readRDS("midus_cancer_aging_analysis_dataset.rds")
+MIDUS_data <-readRDS("~/PQAR 2026/Research Project/midus_cancer_aging_analysis_dataset.rds")
 View(MIDUS_data)
 dim(MIDUS_data)
+
+colnames(MIDUS_data)
 
 #Install and load packages: tidyverse, gtsummary, flextable, broom, officer, mice, corrr, tibble, misty
 library(tidyverse)
@@ -29,27 +31,48 @@ library(tinytex)
 #data from each column (variable)
 univariate_stats <- MIDUS_data %>% select(grimage2:efficacy_STD)
 #adds label of what summary value is produced (dependent on data type)
-uni_labs <- setNames(
-  lapply(names(univariate_stats), function(v) {
-    if (is.numeric(univariate_stats[[v]])) paste0(v, ", mean (SD)")
-    else paste0(v, ", n (%)")
-  }),
-  names(univariate_stats)
+uni_labs <- list(
+  grimage2        ~ "GrimAge2 (Epigenetic Age), mean (SD)",
+  dunedinpace     ~ "DunedinPACE (Pace of Aging), mean (SD)",
+  bmi             ~ "Body Mass Index (BMI), mean (SD)",
+  age             ~ "Chronological Age (years), mean (SD)",
+  sex             ~ "Sex, No. (%)",
+  race_eth        ~ "Race/Ethnicity, No. (%)",
+  marital         ~ "Marital Status, No. (%)",
+  education       ~ "Educational Attainment, No. (%)",
+  income          ~ "Annual Household Income, mean (SD)",
+  num_chron       ~ "Number of Chronic Conditions, mean (SD)",
+  smoking         ~ "Smoking Status, No. (%)",
+  alcohol         ~ "Alcohol Consumption, No. (%)",
+  famcancer       ~ "Family History of Cancer, No. (%)",
+  cancer_history  ~ "Personal Cancer History, mean (SD)",
+  cancerrisk      ~ "Perceived Cancer Risk, mean (SD)",
+  efficacy        ~ "Cancer Prevention Self-Efficacy, mean (SD)",
+  grimage2_STD    ~ "GrimAge2 (Standardized), mean (SD)",
+  dunedinpace_STD ~ "DunedinPACE (Standardized), mean (SD)",
+  cancerrisk_STD  ~ "Perceived Cancer Risk (Standardized), mean (SD)",
+  efficacy_STD    ~ "Cancer Prevention Self-Efficacy (Standardized), mean (SD)"
 )
 #tblsummary() function to calculate values and make them into a table, digits = 3
 univariate_stats_table <- univariate_stats %>%
   tbl_summary(
     statistic = list(
-    all_continuous() ~ "{mean} ({sd})",
-    all_categorical() ~ "{n} ({p}%)"
-  ),
-  missing_text = "Missing",
-digits = all_continuous() ~ 1, #check what is the standard protocol for results
-label = uni_labs
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    missing_text = "Missing",
+    digits = all_continuous() ~ 1,
+    label = uni_labs
   ) %>%
-  modify_caption("Table I. MIDUS Study Univariate Statistics")
+  modify_caption("Table I. Univariate Statistics on MIDUS II Data")
 #view table
 univariate_stats_table
+
+univariate_stats_table %>%
+  as_gt() %>%
+  gt::gtsave("univariate_stats_table.docx")
+
+
 #ADD
 #Use function to export directly to word (package)
 #within gtsummary() there is a label command where we name everything with technical names 
