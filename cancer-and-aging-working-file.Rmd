@@ -1,0 +1,317 @@
+---
+title: "R Notebook"
+output: html_notebook
+authors: Ria Baipai, Rafaela Drake, Grace McNally
+date: "2026-06-11"
+---
+
+
+This analysis file starts from the cleaned analytic dataset created for you:
+
+```{text}
+Data/midus_cancer_aging_analysis_dataset.rds
+```
+
+Week 1 Tasks:
+
+1. Install R and RStudio
+2. Install the following R packages: tidyverse, gtsummary, flextable, broom, officer, mice, corrr, tibble, misty
+3. Create ‘Table 1’ univariate statistics on the study population (put this in a Word document)
+
+Installing necessary R packages
+# Set Up
+```{r}
+
+library(gtsummary)
+library(flextable)
+library(broom)
+library(officer)
+library(mice)
+library(corrr)
+library(tibble)
+library(misty)
+library(haven)
+library(dplyr)
+library(readr)
+library(tidyverse)
+library(labelled)
+library(Hmisc)
+```
+
+
+```{r}
+theme_gtsummary_journal(journal = "jama")
+  # this means all data you create will be saved in the Data folder which is inside this project's working directory
+
+# Use this to get your working directory
+project_dir <- getwd()
+
+data_dir  <- file.path(project_dir, "Data")
+
+# this means all outputs you create will be saved in the Ouput folder which is inside this project's working directory
+output_dir  <- file.path(project_dir, "Output")
+```
+
+
+The main exposure is standardized perceived cancer risk:
+
+```text
+cancerrisk_STD
+```
+
+The two outcomes are:
+
+```text
+grimage2_STD
+dunedinpace_STD
+```
+
+To get you started;
+
+# Load analytic dataset
+
+```{r load-data}
+
+library(dplyr) 
+# This creates the path where the CSV version will be saved
+  midus_data <- readRDS("~/Desktop/PQAR_Analysis/Data/midus_cancer_aging_analysis_dataset.rds") #Canc_data: data from MIDUS cancer subproject
+
+glimpse(midus_data)
+
+
+  # Setting variables for data table
+  age <- Canc_data$age 
+  sex <- Canc_data$sex 
+  edu <- Canc_data$education 
+  income <- Canc_data$income 
+  race_ethn <- Canc_data$race_eth 
+  mar_stat <- Canc_data$marital
+  bmi <- Canc_data$bmi
+  grimage2 <- Canc_data$grimage2_STD
+  dunedinpace <- Canc_data$dunedinpace_STD
+  num_chron <- Canc_data$num_chron
+  smoking <- Canc_data$smoking
+  alcohol <- Canc_data$alcohol
+  famcancer <- Canc_data$famcancer
+  cancerrisk <- Canc_data$cancerrisk
+  self_efficacy <- Canc_data$efficacy
+  
+  
+  # Create dataframe based on given variables
+  df1 <- data.frame(age, race_ethn, sex, mar_stat, edu, income, bmi, grimage2, dunedinpace, num_chron, smoking, alcohol, famcancer, cancerrisk, self_efficacy)
+  
+# Adding descriptive labels to data frame
+
+  var_label(df1$age) <- "Age"
+  var_label(df1$sex) <- "Sex"
+  var_label(df1$mar_stat) <- "Marital Status"
+  var_label(df1$edu) <- "Education"
+  var_label(df1$income) <- "Income"
+  var_label(df1$bmi) <- "BMI"
+  var_label(df1$race_ethn) <- "Race and Ethnicity"
+  var_label(df1$grimage2) <- "GrimAge2"
+  var_label(df1$dunedinpace) <- "DunedinPACE"
+  var_label(df1$num_chron) <- "Number of Chronic Conditions"
+  var_label(df1$smoking) <- "Smoking Status"
+  var_label(df1$alcohol) <- "Alcohol Consumption"
+  var_label(df1$famcancer) <- "Family Cancer History"
+  var_label(df1$self_efficacy) <- "Self Efficacy"
+  var_label(df1$cancerrisk) <- "Perceived Cancer Risk"
+  colnames(df1) <- Hmisc::label(df1) # Assigning new labels to data frame
+  glimpse(df1) 
+```
+
+
+
+# Create ‘Table 1' univariate statistics on the study population
+```{r}
+
+table1 <- midus_data %>% 
+  select(race_eth, grimage2, dunedinpace, bmi, age, 
+         sex, marital, education, income, num_chron, 
+         smoking, alcohol, famcancer, cancerrisk, efficacy) %>%
+
+  tbl_summary( 
+     type = list(
+      # Quantitative (Continuous) Variables
+      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous",
+      # Categorical Variables
+      c(race_eth, sex, marital, education, smoking, alcohol, famcancer) ~ "categorical") ,
+    statistic = list( 
+      all_continuous() ~ "{mean} ({sd})",   # Removed the c() wrapper
+      all_categorical() ~ "{n} ({p}%)" 
+    ), 
+ missing_text = "Missing",
+ missing = "ifany",
+ digits = all_continuous() ~ 1, 
+    label = list(
+      race_eth ~ "Race and Ethnicity",
+      grimage2 ~ "GrimAge", 
+      dunedinpace ~ "DunedinPACE", 
+      bmi ~ "BMI (kg/m²)",
+      age ~ "Age",
+      sex ~ "Sex",
+      marital ~ "Marital Status",
+      education ~ "Education Level",
+      income ~ "Annual Income",
+      num_chron ~ "Number of Chronic Conditions",
+      smoking ~ "Smoking Status",
+      alcohol ~ "Alcohol Consumption",
+      famcancer ~ "Family History of Cancer",
+      cancerrisk ~ "Cancer Risk Score", 
+      efficacy ~ "Self-Efficacy Score"
+    )
+  )  %>%
+  #removing missing values for 
+  remove_row_type(
+    variables = all_continuous(),
+    type = "missing"
+  ) %>%
+  bold_labels() %>%
+  modify_caption("**Table I. Univariate Statistics on MIDUS II Participants**")
+
+table1
+
+as_gt(table1) %>% 
+ gt::gtsave(filename = "midus_table_1.docx")
+
+```
+
+
+```{r}
+# Create a histogram
+
+histogram_plot <- df1 %>%
+  ggplot(aes(x = income)) +
+  geom_histogram(bins = 30, color = "white") +
+  labs(title = "Distribution of Income",
+       x = "Income", y = "Count") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))  # this centers the title
+
+# Show the plot in the notebook
+histogram_plot
+
+# Save the histogram as a PNG image
+ggsave(filename = file.path(output_dir, "example_income_histogram.png"),
+       plot = histogram_plot, width = 7, height = 5, dpi = 300)
+```
+
+
+
+# Table 2
+```{r}
+
+library(tidyverse)
+library(flextable)
+# Generate a basic summary table
+
+table2 <- midus_data %>%
+  select(race_eth, grimage2, dunedinpace, bmi, age, 
+         sex, marital, education, income, num_chron, 
+         smoking, alcohol, famcancer, cancerrisk, efficacy) %>%
+  tbl_summary(
+    by = race_eth,
+    type = list(
+      # Quantitative (Continuous) Variables
+      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous",
+      # Categorical Variables
+     # Categorical Variables
+      c(sex, marital, education, smoking, alcohol, famcancer) ~ "categorical") ,
+    # Define the exact layout styles from your example image
+    statistic = list(
+      all_continuous() ~  "{mean} ({sd})", # Separate rows for N and Mean
+      all_categorical() ~ "{n} ({p}%)"                # Clean fraction format
+    ),
+    missing_text = "Missing",
+    #hiding missing values??
+    missing = "ifany", 
+    #applying clear labels 
+    
+    #do we want to use all these variables?? 
+    label = list(
+      grimage2 ~ "GrimAge", #outcomes 
+      dunedinpace ~ "DunedinPACE", #outcomes 
+      bmi ~ "BMI (kg/m²)",
+      age ~ "Patient Age",
+      sex ~ "Sex",
+      marital ~ "Marital Status",
+      education ~ "Education Level",
+      income ~ "Annual Income ($)",
+      num_chron ~ "Number of Chronic Conditions",
+      smoking ~ "Smoking Status",
+      alcohol ~ "Alcohol Consumption",
+      famcancer ~ "Family History of Cancer",
+      cancerrisk ~ "Cancer Risk Score", #is this the perceived cancer risk?
+      efficacy ~ "Self-Efficacy Score")
+    
+  )%>%
+  bold_labels()
+table2
+# 2. Convert to gt and apply the precise Word document overrides
+as_gt(table2) %>% 
+  # Fix 1: Pass caption via gt::tab_caption using a vector to silence Word's counter
+  gt::tab_caption(
+    caption = c("Table II. Demographic Characteristics of MIDUS Participants by Race and Ethnicity")
+  ) %>%
+
+  gt::gtsave(filename = "midus_table_2.docx")
+
+```
+
+# Table 3: combining tables 1 & 2 (using add function, will be the actual table 1 in the paper)
+
+```{r}
+
+library(tidyverse)
+library(gtsummary)
+library(gt)
+
+
+table3 <- midus_data %>%
+  select(race_eth, grimage2, dunedinpace, bmi, age, 
+         sex, marital, education, income, num_chron, 
+         smoking, alcohol, famcancer, cancerrisk, efficacy) %>%
+  tbl_summary(
+    by = race_eth,
+    type = list(
+      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous2"
+    ), #continuous 2 splits into N and Mean (SD) rows 
+    # Define the exact layout styles from your example image
+    statistic = list(
+      all_continuous() ~ c("{N_nonmiss}", "{mean} ({sd})"), # Separate rows for N and Mean
+      all_categorical() ~ "{n} ({p}%)"                # Clean fraction format
+    ),
+    #hiding missing values??
+    missing = "ifany", 
+    #applying clear labels 
+    
+    #do we want to use all these variables?? 
+    label = list(
+      grimage2 ~ "GrimAge", #outcomes 
+      dunedinpace ~ "DunedinPACE", #outcomes 
+      bmi ~ "BMI (kg/m²)",
+      age ~ "Patient Age",
+      sex ~ "Sex",
+      marital ~ "Marital Status",
+      education ~ "Education Level",
+      income ~ "Annual Income ($)",
+      num_chron ~ "Number of Chronic Conditions",
+      smoking ~ "Smoking Status",
+      alcohol ~ "Alcohol Consumption",
+      famcancer ~ "Family History of Cancer",
+      cancerrisk ~ "Cancer Risk Score", #is this the perceived cancer risk?
+      efficacy ~ "Self-Efficacy Score")
+    
+  )%>%
+  add_n() %>% 
+  add_p() %>%
+  add_stat_label() %>%
+  bold_labels() %>%
+  as_gt()%>%
+  gt::tab_header(
+    title = gt::md("**Table 3. Treatment Differences**")) 
+
+table3
+```
+
