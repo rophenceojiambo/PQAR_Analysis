@@ -21,7 +21,7 @@ Week 1 Tasks:
 Installing necessary R packages
 # Set Up
 ```{r}
-library("corrr")
+library(corrr)
 library(rempsyc)
 library(officer)
 library(gtsummary)
