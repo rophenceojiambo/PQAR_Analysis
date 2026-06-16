@@ -315,3 +315,26 @@ table3 <- midus_data %>%
 table3
 ```
 
+
+```{r}
+library(corrr)
+
+#Table 3: Zero-Order Correlation Matrix
+#Create Table 3: zero-order correlations among age, perceived cancer risk z-score, GrimAge2, DunedinPACE 
+#In meeting more variables were discussed* confirm for matrix
+
+#Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with emphasis on outcomes and exposure ()
+
+#using misty package to create correlation matrix
+Correlation_Matrix <- cor.matrix(MIDUS_data, age, grimage2, dunedinpace, age, num_chron, cancerrisk, efficacy,
+           method = "pearson",
+           na.omit = FALSE, sig = FALSE, alpha = 0.05,
+           print = c("cor", "p"),
+           tri = "lower",
+           p.adj = "none",
+           digits = 1, p.digits = 3)
+
+#save as word?
+
+```
+
