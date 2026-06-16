@@ -21,7 +21,9 @@ Week 1 Tasks:
 Installing necessary R packages
 # Set Up
 ```{r}
-
+library("corrr")
+library(rempsyc)
+library(officer)
 library(gtsummary)
 library(flextable)
 library(broom)
@@ -326,15 +328,27 @@ library(corrr)
 #Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with emphasis on outcomes and exposure ()
 
 #using misty package to create correlation matrix
-Correlation_Matrix <- cor.matrix(MIDUS_data, age, grimage2, dunedinpace, age, num_chron, cancerrisk, efficacy,
+Correlation_Matrix <- cor.matrix(midus_data, age, grimage2, dunedinpace, age, num_chron, cancerrisk, efficacy,
            method = "pearson",
            na.omit = FALSE, sig = FALSE, alpha = 0.05,
            print = c("cor", "p"),
            tri = "lower",
            p.adj = "none",
            digits = 1, p.digits = 3)
-
-#save as word?
+print(Correlation_Matrix)
+class(Correlation_Matrix)
+#save as word
+#extract data frame 
+cor_df <- as.data.frame(Correlation_Matrix$result$cor)
+class(cor_df)
+#change to flextable 
+cor_table <- flextable(cor_df)
+#formattin columns 
+cor_table <- colformat_double(cor_table, digits = 1) # Round to 2 decimal places
+cor_table <- autofit(cor_table)    
+#saveing as a word document to output file 
+save_as_docx("Correlation Matrix" = cor_table, 
+             path = "Output/correlation_matrix.docx")
 
 ```
 
