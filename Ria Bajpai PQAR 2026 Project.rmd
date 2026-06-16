@@ -10,18 +10,17 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Installing necessary R packages
 ```{r}
-<<<<<<< HEAD
-  library("gtsummary")
-  library("flextable")
-  library("broom")
-  library("officer")
-  library("mice")
-  library("corrr")
-  library("tibble")
-  library("misty")
-  library("haven")
-  library("dplyr")
-  library("Hmisc")
+  # library("gtsummary")
+  # library("flextable")
+  # library("broom")
+  # library("officer")
+  # library("mice")
+  # library("corrr")
+  # library("tibble")
+  # library("misty")
+  # library("haven")
+  # library("dplyr")
+  # library("Hmisc")
 ```
 Classification of variables:
 - Demographic information: age, sex, race/ethnicity, marital status, education, income
@@ -31,7 +30,7 @@ Classification of variables:
 - Dependent variable of this study: cancer risk
 
 
-Reading in data and creating new dataframe based on demographic characteristics
+# Reading in data and creating new dataframe based on demographic characteristics
 ```{r}
   project_dir <- getwd()
   data_dir  <- file.path(project_dir, "Data")
@@ -80,39 +79,9 @@ Reading in data and creating new dataframe based on demographic characteristics
   var_label(df1$cancerrisk) <- "Perceived Cancer Risk"
   colnames(df1) <- Hmisc::label(df1) # Assigning new labels to data frame
   glimpse(df1) 
-=======
-  install.packages("gtsummary")
-  install.packages("flextable")
-  install.packages("broom")
-  install.packages("officer")
-  install.packages("mice")
-  install.packages("corrr")
-  install.packages("tibble")
-  install.packages("misty")
-  install.packages("haven")
-  install.packages("dplyr")
+
 ```
 
-
-# Reading in data and creating new dataframe based on demographic characteristics
-```{r}
-  library(dplyr)
-  Canc_data <- readRDS("~/Desktop/Research_Project_PQAR/midus_cancer_aging_analysis_dataset.rds") #Canc_data: data from MIDUS cancer subproject
-  age <- Canc_data$age # Should we use both age and birth year? Just use Age --> Rophence
-  race_ethn <- Canc_data$race_eth # Participant race and ethnicity
-  sex <- Canc_data$sex # Participant sex
-  mar_stat <- Canc_data$marital # Marital status
-  edu <- Canc_data$education # Education level
-  income <- Canc_data$income # Income
-  
- # pt_id <- Canc_data$id # Participant MIDUS ID
-  
-  
-  # Create dataframe based on given variables (Make sure you use all 14 variables as listed in the Dataset section of your syllabus -->Rophence)
-  df1 <- data.frame(Age = age, Race_Ethnicity = race_ethn, Sex = sex, Marital_Status = mar_stat, Education = edu, Income = income)
-  df1
->>>>>>> dc3ed2ed5e508b2526bd70b1e1fcd7a54493bf35
-```
 
 
 Create ‘Table 1' univariate statistics on the study population
@@ -121,11 +90,16 @@ Create ‘Table 1' univariate statistics on the study population
 library(gtsummary)
 library(tidyverse)
 theme_gtsummary_journal(journal = "jama")
-<<<<<<< HEAD
+
 table1 <-
   df1 %>% 
   select(-`Race and Ethnicity`) %>% # REMOVING race&ethn to make merging (table 3) easier
   tbl_summary( 
+    type = list(c(Sex, `Marital Status`, Education, `Smoking Status`, 
+                `Alcohol Consumption`, `Family Cancer History`) ~ "categorical",
+                c(Age, Income, BMI, GrimAge2, 
+                DunedinPACE, `Number of Chronic Conditions`,
+                `Perceived Cancer Risk`, `Self Efficacy`) ~ "continuous"),
     statistic = 
       list( 
         all_continuous() ~ c("{mean} ({sd})"),
@@ -140,56 +114,56 @@ table1 <-
 ```
 
 
-Table 2
-=======
-df1 %>% # Relabel unknown --> missing, add mean instead of median, use label function to eliminate underscores/clean titles 
-  tbl_summary(missing_text = "Missing") %>% 
-  modify_caption("**Table I. Univariate Demographic Characteristics of MIDUS Participants**")
-
-```
-
-# Table 1 info cont.
-```{r}
-# Create a histogram
-histogram_plot <- df1 %>%
-  ggplot(aes(x = income)) +
-  geom_histogram(bins = 30, color = "white") +
-  labs(title = "Distribution of Income",
-       x = "Income", y = "Count") +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))  # this centers the title
-
-# Show the plot in the notebook
-histogram_plot
-
-# Save the histogram as a PNG image
-ggsave("example_income_histogram.png", 
-       plot = histogram_plot, width = 7, height = 5, dpi = 300)
-```
-
-
 # Table 2
->>>>>>> dc3ed2ed5e508b2526bd70b1e1fcd7a54493bf35
 ```{r}
 library(gtsummary)
 library(tidyverse)
 # Generate a basic summary table
-theme_gtsummary_journal(journal = "jama")
-<<<<<<< HEAD
-table2 <- 
-  df1 %>% # add p-value column - cmd is add p / simulation of 2000 replicates
+table2_cont <- df1 %>% 
   tbl_summary(
-  by = `Race and Ethnicity`,
-  statistic = 
-        list( 
-          all_continuous() ~ c("{mean} ({sd})"),
-          all_categorical() ~ "{n} ({p}%)" 
-          ), 
-       missing_text = "Missing"
-               ) %>%
-  add_overall() %>%
-  add_p() %>%
-  modify_caption("**Table II. Demographic Characteristics of MIDUS Participants by Race and Ethnicity**")
+    by = `Race and Ethnicity`,
+    # Defining variables as continuous
+    include = c(Age, Income, BMI, GrimAge2, 
+                DunedinPACE, `Number of Chronic Conditions`,
+                `Perceived Cancer Risk`, `Self Efficacy`),
+    type = list(everything() ~ "continuous"), 
+    # Specifying type of statistical analysis on continuous values
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})"
+    ),
+    # Do not show missing values
+    missing = "no"
+  ) %>%
+  # Calculate p-values
+  add_overall() %>% 
+  add_p(all_continuous() ~ "kruskal.test")
+
+
+table2_cat <- df1 %>% 
+  tbl_summary(
+    by = `Race and Ethnicity`,
+    # Defining variables as categorical
+    include = c(Sex, `Marital Status`, Education, `Smoking Status`, 
+                `Alcohol Consumption`, `Family Cancer History`),
+    type = list(everything() ~ "categorical"), 
+    # Specifying type of statistical analysis on categorical values
+    statistic = list(
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    # Indicate missing values, their count, and percentage
+    missing_text = "Missing",
+    missing_stat = "{N_miss} ({p_miss}%)"
+  ) %>%
+  # Calculate p-values
+  add_overall() %>% 
+  add_p(all_categorical() ~ "chisq.test.no.correct")
+
+
+# Merging continuous & categorical tables
+theme_gtsummary_journal(journal = "jama")
+table2 <- tbl_stack(
+  tbls = list(table2_cat, table2_cont),
+  )
 
 table2
   
@@ -214,24 +188,24 @@ table2
   self_efficacy <- Canc_data$efficacy
   
 library(gtsummary)
-# Merging both tables above: issue with a lot of white space underneath
+# Merging both tables above
+theme_gtsummary_journal(journal = "jama")
 combined_table <- tbl_merge(
-  tbls = list(table1, table2),
-  tab_spanner = c("**Overall**", NA)
+  tbls = list(table2, table1),
+  tab_spanner = FALSE
 )
 
 combined_table
 ```
 
 # Export as word document
-=======
-df1 %>% # add p-value column - cmd is add p / simulation of 2000 replicates
-  tbl_summary(
-  by = Race_Ethnicity
-  ) %>%
-  modify_caption("**Table II. Demographic Characteristics of MIDUS Participants by Race and Ethnicity**") # or table I ? 
+```{r}
+  library(flextable)
+  combined_table %>%
+  as_flex_table() %>%
+  flextable::save_as_docx(path = "table_3.docx")
 ```
 
-## Table 3: combining tables 1 & 2 (using add function, will be the actual table 1 in the paper)
->>>>>>> dc3ed2ed5e508b2526bd70b1e1fcd7a54493bf35
+
+
 
