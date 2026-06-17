@@ -10,18 +10,20 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Installing necessary R packages
 ```{r}
-  # library("gtsummary")
-  # library("flextable")
-  # library("broom")
-  # library("officer")
-  # library("mice")
-  # library("corrr")
-  # library("tibble")
-  # library("misty")
-  # library("haven")
-  # library("dplyr")
-  # library("Hmisc")
+library("gtsummary")
+library("flextable")
+library("broom")
+library("officer")
+library("mice")
+library("corrr")
+library("tibble")
+library("misty")
+library("haven")
+library("dplyr")
+library("Hmisc")
 ```
+
+
 Classification of variables:
 - Demographic information: age, sex, race/ethnicity, marital status, education, income
 - Physical considerations: smoking, number of chronic diseases, BMI, alcohol, family cancer history
@@ -32,12 +34,22 @@ Classification of variables:
 
 # Reading in data and creating new dataframe based on demographic characteristics
 ```{r}
-  project_dir <- getwd()
-  data_dir  <- file.path(project_dir, "Data")
+# Please comment your code so that someone else can follow along, for example, the code below is getting project working directory, also don't indent your code, add a line space to separte different lines of codes
+
+# Get current project directory (RO)
+project_dir <- getwd()
+
+# Get data directory
+
+data_dir  <- file.path(project_dir, "Data")
   output_dir  <- file.path(project_dir, "Output")
   analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
-  library(dplyr)
-  Canc_data <- readRDS(analysis_path) #Canc_data: data from MIDUS cancer subproject
+  
+  
+  library(dplyr)  # all libraries should be placed in the first chunk and well commented
+  
+# loading in the datatset  
+Canc_data <- readRDS(analysis_path) #Canc_data: data from MIDUS cancer subproject
   
   # Setting variables for data table
   age <- Canc_data$age 
@@ -60,7 +72,8 @@ Classification of variables:
   # Create dataframe based on given variables
   df1 <- data.frame(age, race_ethn, sex, mar_stat, edu, income, bmi, grimage2, dunedinpace, num_chron, smoking, alcohol, famcancer, cancerrisk, self_efficacy)
   
-# Adding descriptive labels to data frame
+# Adding descriptive labels to data frame >> you did not need to do this, as you are subsetting the dataset just to create labels, yet subseqent anlysis will require some of the standardized variables not included in this subset. One way to add labels is using the label function in tbl_summary. What you did here creates spaces in Variable names and variable names should not have spaces, so use label function within tbl_summary
+  
   library(labelled)
   var_label(df1$age) <- "Age"
   var_label(df1$sex) <- "Sex"
@@ -85,6 +98,8 @@ Classification of variables:
 
 
 Create ‘Table 1' univariate statistics on the study population
+
+
 ```{r}
 # Generate a basic summary table
 library(gtsummary)
@@ -93,7 +108,7 @@ theme_gtsummary_journal(journal = "jama")
 
 table1 <-
   df1 %>% 
-  select(-`Race and Ethnicity`) %>% # REMOVING race&ethn to make merging (table 3) easier
+  select(-`Race and Ethnicity`) %>% # REMOVING race&ethn to make merging (table 3) easier >> Dont't remove it as you you will need overall descriptive statistics in the slides, it's only removed for the next two tables
   tbl_summary( 
     type = list(c(Sex, `Marital Status`, Education, `Smoking Status`, 
                 `Alcohol Consumption`, `Family Cancer History`) ~ "categorical",
@@ -114,9 +129,117 @@ table1 <-
 ```
 
 
-# Table 2
 ```{r}
+# Load packages
+library(tidyverse)
 library(gtsummary)
+
+# Use JAMA table style
+theme_gtsummary_journal(journal = "jama")  # this needs to be done once
+
+# Table 1: Overall descriptive statistics
+# Do NOT remove Race and Ethnicity here.
+# We need it for the overall descriptive table used in slides/reports.
+# Race and Ethnicity should only be removed later for tables where it is the grouping variable.
+
+table1 <- df1 %>%
+  tbl_summary(
+    include = c(`Race and Ethnicity`, Sex, `Marital Status`, Education, `Smoking Status`, `Alcohol Consumption`, `Family Cancer History`, Age, Income, BMI, GrimAge2, DunedinPACE, `Number of Chronic Conditions`, `Perceived Cancer Risk`, `Self Efficacy`),
+    type = list(c(`Race and Ethnicity`, Sex, `Marital Status`, Education, `Smoking Status`, `Alcohol Consumption`, `Family Cancer History`) ~ "categorical",
+                c(Age, Income, BMI, GrimAge2, DunedinPACE, `Number of Chronic Conditions`, `Perceived Cancer Risk`, `Self Efficacy`) ~ "continuous"),
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 2,
+                  all_categorical() ~ c(0, 1)),
+    missing = "no"  ## here data has missing values so you need t
+  ) %>%
+  modify_caption("**Table 1. Overall Descriptive Characteristics of MIDUS Participants**") %>%
+  modify_header(label ~ "**Characteristic**") %>%
+  bold_labels()
+
+table1
+```
+
+
+see your code above nicely formatted by CHATGPT
+
+```{r}
+# Load packages
+library(tidyverse)
+library(gtsummary)
+
+# Use JAMA table style
+theme_gtsummary_journal(journal = "jama")
+
+# Table 1: Overall descriptive statistics
+# Do not remove Race and Ethnicity here.
+# Race and Ethnicity is needed for the overall descriptive table.
+# Remove it only later when creating race-stratified or merged tables.
+
+# For R to recognize the missing values in specific variables as missing we need to explicitly create a missing category for categorical variables that have missing values
+
+df1 <- df1 %>%
+  mutate(
+    `Marital Status` = as.character(`Marital Status`),
+    `Marital Status` = if_else(is.na(`Marital Status`), "Missing", `Marital Status`),
+    `Marital Status` = factor(
+    `Marital Status`,
+      levels = c(
+        "Married",
+        "Divorced/Separated/Widowed",
+        "Never married",
+        "Missing"
+      )
+    ),
+
+    Education = as.character(Education),
+    Education = if_else(is.na(Education), "Missing", Education),
+    Education = factor(
+      Education,
+      levels = c(
+        "High school or less",
+        "Some college/associate's degree",
+        "College degree or higher",
+        "Missing"
+      )
+    ),
+
+    `Family Cancer History` = as.character(`Family Cancer History`),
+    `Family Cancer History` = if_else(is.na(`Family Cancer History`), "Missing", `Family Cancer History`),
+    `Family Cancer History` = factor(`Family Cancer History`, levels = c("No", "Yes", "Missing"))
+  )
+
+table1 <- df1 %>%
+  tbl_summary(include = c(`Race and Ethnicity`, Sex, `Marital Status`, Education,
+                          `Smoking Status`, `Alcohol Consumption`, `Family Cancer History`,
+                          Age, Income, BMI, GrimAge2, DunedinPACE,`Number of Chronic Conditions`,
+                          `Perceived Cancer Risk`, `Self Efficacy`),
+              type = list(c(`Race and Ethnicity`, Sex, `Marital Status`, Education,
+                            `Smoking Status`, `Alcohol Consumption`, `Family Cancer History`) ~ "categorical",
+                          c(Age, Income, BMI, GrimAge2, DunedinPACE, 
+                            `Number of Chronic Conditions`, `Perceived Cancer Risk`, `Self Efficacy`) ~ "continuous"),
+              
+              statistic = list(all_continuous() ~ "{mean} ({sd})",
+                               all_categorical() ~ "{n} ({p}%)"),
+              digits = list(all_continuous() ~ 2,
+                            all_categorical() ~ c(0, 1)), 
+              missing = "ifany",
+              missing_stat = "{N_miss} ({p_miss}%)",  # this adds the frequency and % missing
+              missing_text = "Missing") %>%  # here you can now use  missing_text = "Missing" if you have coded categorical variables with missing values as Missing, previously it was missing = "ifany" which also shows missing values in continouous variables, and we do not want that.
+  modify_caption("**Table 1. Overall Descriptive Characteristics of MIDUS Participants**") %>%
+  modify_header(label ~ "**Characteristic**") %>%
+  bold_labels()
+
+table1
+```
+
+# Table 2
+
+Rophence>>> this is not the right way to go about it, you don't need to do it separately for continuous then separately for categorical, and then merge them, you just need to modify your code for Table 1 above  and use the `by` syntax within tbl_summary, so your code here is wrong
+
+
+```{r}
+library(gtsummary)  # once you load libraries you don't need to load them again in every R chunk
 library(tidyverse)
 # Generate a basic summary table
 table2_cont <- df1 %>% 
@@ -155,8 +278,8 @@ table2_cat <- df1 %>%
     missing_stat = "{N_miss} ({p_miss}%)"
   ) %>%
   # Calculate p-values
-  add_overall() %>% 
-  add_p(all_categorical() ~ "chisq.test.no.correct")
+  add_overall() %>%  # this should not have been added, it's part of what makes Table 3, Table 2 was just stratified by race
+  add_p(all_categorical() ~ "chisq.test.no.correct")  # this is wrong, some variables are continuous so you need two arguments on how to find p values for continuous and for categorical
 
 
 # Merging continuous & categorical tables
@@ -169,7 +292,133 @@ table2
   
 ```
 
+
+the correct code for Table 2, would just be using the correct code for table 1 and adding in `by`, see below
+
+```{r}
+# Table 2: Descriptive statistics by Race and Ethnicity
+# No overall column.
+# P-values compare each variable across Race/Ethnicity groups.
+# Chi-square tests are used for categorical variables to avoid Fisher exact test errors.
+
+table2 <- df1 %>%
+  tbl_summary(
+    by = `Race and Ethnicity`,
+
+    include = c(Sex, `Marital Status`, Education,
+                `Smoking Status`, `Alcohol Consumption`,
+                `Family Cancer History`, Age, Income, BMI,
+                GrimAge2, DunedinPACE,
+                `Number of Chronic Conditions`,
+                `Perceived Cancer Risk`, `Self Efficacy`),
+
+    type = list(
+      c(Sex, `Marital Status`, Education,
+        `Smoking Status`, `Alcohol Consumption`,
+        `Family Cancer History`) ~ "categorical",
+      c(Age, Income, BMI, GrimAge2, DunedinPACE,
+        `Number of Chronic Conditions`,
+        `Perceived Cancer Risk`, `Self Efficacy`) ~ "continuous"
+    ),
+
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+
+    digits = list(
+      all_continuous() ~ 2,
+      all_categorical() ~ c(0, 1)
+    ),
+
+    missing = "ifany",
+    missing_text = "Missing",
+    missing_stat = "{N_miss} ({p_miss}%)"
+  ) %>%
+  add_p(
+    test = list(
+      all_categorical() ~ "chisq.test",
+      all_continuous() ~ "kruskal.test"
+    ),
+    pvalue_fun = ~ style_pvalue(.x, digits = 3)
+  ) %>%
+  modify_caption(
+    "**Table 2. Descriptive Characteristics of MIDUS Participants by Race and Ethnicity**"
+  ) %>%
+  modify_header(label ~ "**Characteristic**") %>%
+  bold_labels()
+
+table2
+```
+
+
+Running the above gives you warnings, never ignore warnings because they always tell you something is not right. The warning means the regular chi-square approximation may not be reliable because some Race/Ethnicity × category cells are small. Instead of forcing Fisher’s exact test, which caused the FEXACT workspace error, use Monte Carlo simulation for the chi-square p-value. Thus, for categorical variables, use chi-square tests with simulated p-values. This avoids Fisher exact test errors and reduces problems caused by small cell counts.
+
+
+Thus correct code for cretaing table 2 will be as follows:
+
+```{r}
+table2 <- df1 %>%
+  tbl_summary(
+    by = `Race and Ethnicity`,
+
+    include = c(Sex, `Marital Status`, Education,
+                `Smoking Status`, `Alcohol Consumption`,
+                `Family Cancer History`, Age, Income, BMI,
+                GrimAge2, DunedinPACE,
+                `Number of Chronic Conditions`,
+                `Perceived Cancer Risk`, `Self Efficacy`),
+
+    type = list(
+      c(Sex, `Marital Status`, Education,
+        `Smoking Status`, `Alcohol Consumption`,
+        `Family Cancer History`) ~ "categorical",
+      c(Age, Income, BMI, GrimAge2, DunedinPACE,
+        `Number of Chronic Conditions`, `Perceived Cancer Risk`,
+        `Self Efficacy`) ~ "continuous"
+    ),
+
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+
+    digits = list(
+      all_continuous() ~ 2,
+      all_categorical() ~ c(0, 1)
+    ),
+
+    missing = "ifany",
+    missing_text = "Missing",
+    missing_stat = "{N_miss} ({p_miss}%)"
+  ) %>%
+  add_p(
+    test = list(
+      all_categorical() ~ "chisq.test",
+      all_continuous() ~ "kruskal.test"
+    ),
+    test.args = list(
+      all_tests("chisq.test") ~ list(simulate.p.value = TRUE, B = 2000)
+    ),
+    pvalue_fun = ~ style_pvalue(.x, digits = 3)
+  ) %>%
+  modify_caption(
+    "**Table 2. Descriptive Characteristics of MIDUS Participants by Race and Ethnicity**"
+  ) %>%
+  modify_header(label ~ "**Characteristic**") %>%
+  bold_labels()
+
+table2
+```
+
 ## Table 3: combining tables 1 & 2 (using add function, will be the actual table 1 in the paper)
+
+Rophence>>> so this is not the right way to combine tables 1 & 2, use the table 2 code above and all you need to add is the  add_overall() %>% function before the add_p() function
+
+Kindy update your RMD and be sure to finish the rest of the tasks assigned yesterday and today!
+
+Happy coding!
+
 ```{r}
   age <- Canc_data$age 
   sex <- Canc_data$sex 
