@@ -76,9 +76,12 @@ To get you started;
 
 library(dplyr) 
 # This creates the path where the CSV version will be saved
-  midus_data <- readRDS("~/Desktop/PQAR_Analysis/Data/midus_cancer_aging_analysis_dataset.rds") #Canc_data: data from MIDUS cancer subproject
+ # midus_data <- readRDS("~/Desktop/PQAR_Analysis/Data/midus_cancer_aging_analysis_dataset.rds") #Canc_data: data from MIDUS cancer subproject (edited by Ria - added new code for file path)
 
-glimpse(midus_data)
+analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
+Canc_data <- readRDS(analysis_path)
+
+glimpse(Canc_data)
 
 
   # Setting variables for data table
