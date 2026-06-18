@@ -156,7 +156,7 @@ table2_cat <- df1 %>%
   ) %>%
   # Calculate p-values
   add_overall() %>% 
-  add_p(all_categorical() ~ "chisq.test.no.correct")
+  add_p(all_categorical() ~ "chisq.test") # Unclear on how p-value is being calculated for categorical values
 
 
 # Merging continuous & categorical tables
@@ -201,11 +201,133 @@ combined_table
 # Export as word document
 ```{r}
   library(flextable)
+  table1 %>%
+    as_flex_table() %>%
+    flextable::save_as_docx(path = "table_1.docx")
+  
+  table2 %>%
+    as_flex_table() %>%
+    flextable::save_as_docx(path = "table_2.docx")
+  
   combined_table %>%
-  as_flex_table() %>%
-  flextable::save_as_docx(path = "table_3.docx")
+    as_flex_table() %>%
+    flextable::save_as_docx(path = "Output/Ria_table_3.docx")
+
+```
+
+## Ria's Imputation Code
+# Getting started
+```{r}
+# Loading packages
+library(tidyverse)    # Data wrangling and visualization
+library(mice)         # Multiple imputation
+library(missRanger)   # Random forest imputation
+library(VIM)
+
+# Set seed for reproducibility
+set.seed(0864)
+
+# Load dataset
+data_dir  <- file.path(project_dir, "Data")
+output_dir  <- file.path(project_dir, "Output")
+analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
+library(dplyr)
+canc_data <- readRDS(analysis_path) #Canc_data: data from MIDUS cancer subproject
+head(canc_data)
+dim(canc_data)
 ```
 
 
+# Subsetting data
+```{r}
+# Compiling relevant confounders in vector
+# i.e. subsetting the data to include the two standardized outcomes, 
+# the standardized exposure, the moderator and the 11 covariates
+canc_vars <- canc_data[ , c("grimage2_STD", "dunedinpace_STD", "cancerrisk_STD",
+                 "race_eth", "age", "sex", "education", "income",
+                 "smoking", "bmi", "famcancer")]
 
+confounders <- c("age", "sex", "education", "income",
+  "smoking", "bmi", "famcancer")
+```
+
+# Summarizing missing data
+```{r}
+# Counting number of NA
+md.pattern(canc_data) 
+# Pattern summary: 1087 rows of 1156 that are complete. 
+
+# Determining four missing patterns
+md.pairs(canc_data)
+# Looking at mr / rm values helps understand which values have overlapping data
+# to make them eligible for calculating imputations. 
+
+# Plotting missingness data
+library(VIM)
+marginplot(canc_data[, c("grimage2_STD", "income")], col = mdc(1:2), cex = 1.2,
+            cex.lab = 1.2, cex.numbers = 1.3, pch = 19)
+# In bottom margin, blue box plot represents distribution 
+# of the GrimAge2 values represented in the center. The red boxplot at the 
+# bottom represents distribution of GrimAge2 values with missing Income points.
+
+# Function to summarize missingness
+missing_summary <- function(data, vars) {
+  data %>%
+    summarise(
+      across(
+        all_of(vars),
+        ~ mean(is.na(.x)) * 100
+      )
+    ) %>%
+    pivot_longer(
+      cols = everything(),
+      names_to = "variable",
+      values_to = "percent_missing"
+    )
+}
+
+# 3. Check missingness in the original data
+############################################################
+missing_summary(canc_vars, confounders)
+
+```
+
+# Creating a predictor matrix
+```{r}
+# Generating predictor matrix
+quickpred(canc_vars)
+```
+
+# Adjusting methods
+```{r}
+# Creating a methods object
+canc_methods <- make.method(canc_vars[confounders]) 
+canc_methods
+
+# Assigning new methods to categorical variables
+canc_methods["education"] <- "polyreg"
+canc_methods["famcancer"] <- "logreg"
+```
+
+# Conducting the imputation using mice
+```{r}
+# Separate the variables we want to impute from the variables we want to keep.
+# Here, only the confounders are sent to mice() - so that outcomes are not
+# used as predictors.
+to_imp <- canc_vars %>% #this is known as data wrangling: 
+   select(all_of(confounders))
+
+keep <- canc_vars %>%
+   select(-all_of(confounders))
+
+
+imp <- mice(
+  to_imp, # data: what we want to impute
+  m = 20, # number of imputations to perform
+  seed = 0864,
+  printFlag = FALSE,
+  method = canc_methods
+)
+
+```
 
