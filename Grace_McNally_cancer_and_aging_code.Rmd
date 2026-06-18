@@ -1,124 +1,395 @@
 ---
-title: "PQAR 2026 Research Project"
-output: rmd
+title: "R Notebook"
+output: html_notebook
+authors: Ria Baipai, Rafaela Drake, Grace McNally
 date: "2026-06-11"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+
+This analysis file starts from the cleaned analytic dataset created for you:
+
+```{text}
+Data/midus_cancer_aging_analysis_dataset.rds
 ```
 
+Week 1 Tasks:
 
+1. Install R and RStudio
+2. Install the following R packages: tidyverse, gtsummary, flextable, broom, officer, mice, corrr, tibble, misty
+3. Create ‘Table 1’ univariate statistics on the study population (put this in a Word document)
+
+
+# Set Up
 
 ```{r}
-library(readr)
+# Load needed packages
 library(gtsummary)
-library(tidyverse)
+library(flextable)
+library(broom)
+library(officer)
+library(mice)
+library(corrr)
+library(tibble)
+library(misty)
+library(haven)
 library(dplyr)
-
-#add table labels caption function 
-#one decimal place convention across the tables
-
-# Build a basic, overall summary table
-midus_table_1 <- midus_data %>%
-  # 1. Select the primary variables (excluding race_eth since we aren't stratifying by it)
-  select(
-    grimage2, dunedinpace, bmi, age, 
-    sex, marital, education, income, num_chron, 
-    smoking, alcohol, famcancer, cancerrisk, efficacy
-  ) %>%
-  # 2. Build the summary table for the entire sample
-  tbl_summary(
-    # Force discrete risk/efficacy scores to display as continuous numeric averages
-    type = list(
-      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous"
-    ),
-    
-    # Use standard Mean (SD) for continuous, and clean fractions for categorical
-    statistic = list(
-      all_continuous() ~ "{mean} ({sd})",
-      all_categorical() ~ "{n} ({p}%)"
-    ),
-    
-    # Hide missing/Unknown rows to keep the layout crisp
-    missing = "ifany",
-  
-  # 3. Apply the same professional labels
-  label = list(
-    grimage2 ~ "GrimAge",
-    dunedinpace ~ "DunedinPACE",
-    bmi ~ "BMI (kg/m²)",
-    age ~ "Patient Age",
-    sex ~ "Sex",
-    marital ~ "Marital Status",
-    education ~ "Education Level",
-    income ~ "Annual Income ($)",
-    num_chron ~ "Number of Chronic Conditions",
-    smoking ~ "Smoking Status",
-    alcohol ~ "Alcohol Consumption",
-    famcancer ~ "Family History of Cancer",
-    cancerrisk ~ "Cancer Risk Score",
-    efficacy ~ "Self-Efficacy Score"
-   ))%>%
-  bold_labels()
-
-# 4. Save your basic table to a Word Document
-as_gt(midus_table_1) %>% 
-  gt::gtsave(filename = "midus_table_1_basic.docx")
+library(readr)
+library(tidyverse)
+library(labelled)
+library(Hmisc)
 ```
 
+
 ```{r}
+# theme for tables
+theme_gtsummary_journal(journal = "jama")
+```
 
-#Table 2 
-#need to add p value
-#add overall 
 
+The main exposure is standardized perceived cancer risk:
+
+```text
+cancerrisk_STD
+```
+
+The two outcomes are:
+
+```text
+grimage2_STD
+dunedinpace_STD
+```
+
+To get you started;
+
+# Load analytic dataset
+
+```{r load-data}
+# Loading the data
 midus_data <- readRDS("Data/midus_cancer_aging_analysis_dataset.rds")
 
+# viewing data structure
+glimpse(midus_data)
 
-table1 <- midus_data %>%
-  select(race_eth, grimage2, dunedinpace, bmi, age, 
-         sex, marital, education, income, num_chron, 
-         smoking, alcohol, famcancer, cancerrisk, efficacy) %>%
-  tbl_summary(
-    by = race_eth,
-    type = list(
-      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous2"
-    ), #continuous 2 splits into N and Mean (SD) rows 
-    # Define the exact layout styles from your example image
-    statistic = list(
-      all_continuous() ~ c("{N_nonmiss}", "{mean} ({sd})"), # Separate rows for N and Mean
-      all_categorical() ~ "{n} ({p}%)"                # Clean fraction format
+```
+
+
+
+# Create ‘Table 1' univariate statistics on the study population
+
+```{r}
+# creating overall descriptive statistics
+table1 <- midus_data %>% 
+  select(age, sex, race_eth, marital, education, income, num_chron, famcancer, efficacy, 
+         smoking, alcohol, bmi, cancerrisk, grimage2, dunedinpace) %>%
+
+  tbl_summary( 
+     type = list(
+      # Quantitative (Continuous) Variables
+      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous",
+      # Categorical Variables
+      c(race_eth, sex, marital, education, smoking, alcohol, famcancer) ~ "categorical") ,
+    statistic = list( 
+      all_continuous() ~ "{mean} ({sd})",   # Removed the c() wrapper
+      all_categorical() ~ "{n} ({p}%)" 
     ),
+    missing = "ifany",
+    missing_stat = "{N_miss} ({p_miss}%)",  # this adds the frequency and % missing
+    missing_text = "Missing", 
+    digits = all_continuous() ~ 1, 
+    label = list(
+      race_eth ~ "Race/Ethnicity",
+      grimage2 ~ "GrimAge2", 
+      dunedinpace ~ "DunedinPACE", 
+      bmi ~ "Body mass index (kg/m²)",
+      age ~ "Age",
+      sex ~ "Sex",
+      marital ~ "Marital status",
+      education ~ "Education attainment",
+      income ~ "Annual household income",
+      num_chron ~ "Number of chronic Conditions",
+      smoking ~ "Smoking status",
+      alcohol ~ "Alcohol consumption",
+      famcancer ~ "Family cancer history",
+      cancerrisk ~ "Perceived cancer risk", 
+      efficacy ~ "Self-efficacy for cancer prevention"))  %>%
+  bold_labels() %>%
+  modify_caption("Table I. Univariate Statistics on Study Population")
+
+table1
+
+table1 %>% 
+  as_flex_table() %>%
+  save_as_docx(path = "Output/Table 1 Overall Descriptives.docx")
+
+```
+
+
+
+
+# Create ‘Table 2' bivariate statistics on the study population
+```{r}
+# Generate a basic summary table
+
+table2 <- midus_data %>%
+  select(age, sex, race_eth, marital, education, income, num_chron, famcancer, efficacy, 
+         smoking, alcohol, bmi, cancerrisk, grimage2, dunedinpace) %>%
+
+tbl_summary(by = race_eth,
+     type = list(
+      # Quantitative (Continuous) Variables
+      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous",
+      # Categorical Variables
+      c(sex, marital, education, smoking, alcohol, famcancer) ~ "categorical") ,
+    statistic = list( 
+      all_continuous() ~ "{mean} ({sd})",   # Removed the c() wrapper
+      all_categorical() ~ "{n} ({p}%)" 
+    ),
+    missing = "ifany",
+    missing_stat = "{N_miss} ({p_miss}%)",  # this adds the frequency and % missing
+    missing_text = "Missing", 
+    digits = all_continuous() ~ 1, 
+    label = list(
+      grimage2 ~ "GrimAge2", 
+      dunedinpace ~ "DunedinPACE", 
+      bmi ~ "Body mass index (kg/m²)",
+      age ~ "Age",
+      sex ~ "Sex",
+      marital ~ "Marital status",
+      education ~ "Education attainment",
+      income ~ "Annual household income",
+      num_chron ~ "Number of chronic Conditions",
+      smoking ~ "Smoking status",
+      alcohol ~ "Alcohol consumption",
+      famcancer ~ "Family cancer history",
+      cancerrisk ~ "Perceived cancer risk", 
+      efficacy ~ "Self-efficacy for cancer prevention"))  %>%
+  bold_labels() %>%
+  modify_caption("Table 2: Descriptive Statistics by Race/Ethnicity on Study Population")
+
+table2
+
+table2 %>% 
+  as_flex_table() %>%
+  save_as_docx(
+    path = "Output/Table 2 Descriptives by Race and Ethnicity.docx",
+    pr_section = prop_section(
+      page_size = page_size(orient = "landscape", width = 11.7, height = 8.3))
+      )
+
+```
+
+# Table 3: combining tables 1 & 2 (using add function, will be the actual table 1 in the paper)
+
+```{r}
+
+library(tidyverse)
+library(gtsummary)
+library(gt)
+
+
+table3 <- midus_data %>%
+  select(age, sex, race_eth, marital, education, income, num_chron, famcancer, efficacy, 
+         smoking, alcohol, bmi, cancerrisk, grimage2, dunedinpace) %>%
+
+tbl_summary(by = race_eth,
+   type = list(
+      # Quantitative (Continuous) Variables
+      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous",
+      # Categorical Variables
+      c(sex, marital, education, smoking, alcohol, famcancer) ~ "categorical"),
+
+    statistic = list( 
+      all_continuous() ~ "{mean} ({sd})",   # Removed the c() wrapper
+      all_categorical() ~ "{n} ({p}%)" 
+    ),
+
+    missing = "ifany",
+    missing_stat = "{N_miss} ({p_miss}%)",  # this adds the frequency and % missing
+    missing_text = "Missing", 
+    digits = all_continuous() ~ 1, 
+
     #hiding missing values??
-    missing = "ifany", 
     #applying clear labels 
     
     #do we want to use all these variables?? 
-    label = list(
-      grimage2 ~ "GrimAge", #outcomes 
-      dunedinpace ~ "DunedinPACE", #outcomes 
-      bmi ~ "BMI (kg/m²)",
-      age ~ "Patient Age",
+   label = list(
+      grimage2 ~ "GrimAge2", 
+      dunedinpace ~ "DunedinPACE", 
+      bmi ~ "Body mass index (kg/m²)",
+      age ~ "Age",
       sex ~ "Sex",
-      marital ~ "Marital Status",
-      education ~ "Education Level",
-      income ~ "Annual Income ($)",
-      num_chron ~ "Number of Chronic Conditions",
-      smoking ~ "Smoking Status",
-      alcohol ~ "Alcohol Consumption",
-      famcancer ~ "Family History of Cancer",
-      cancerrisk ~ "Cancer Risk Score", #is this the perceived cancer risk?
-      efficacy ~ "Self-Efficacy Score")
-    
-  )%>%
-  bold_labels()
+      marital ~ "Marital status",
+      education ~ "Education attainment",
+      income ~ "Annual household income",
+      num_chron ~ "Number of chronic Conditions",
+      smoking ~ "Smoking status",
+      alcohol ~ "Alcohol consumption",
+      famcancer ~ "Family cancer history",
+      cancerrisk ~ "Perceived cancer risk", 
+      efficacy ~ "Self-efficacy for cancer prevention"))  %>% 
+  add_overall() %>% 
+  add_p() %>%
+  add_stat_label() %>%
+  bold_labels() %>%
+  modify_caption("Table 3: Descriptive Statistics Overall and Stratified by Race and Ethnicity")
 
-table2  
+table3
 
-as_gt(table2) %>% 
-  gt::gtsave(filename = "midus_table_1_final.docx")
+table3 %>% 
+  as_flex_table() %>%
+  set_table_properties(layout = "autofit", width = 1) %>%
+  save_as_docx(
+    path = "Output/Table 3 Descriptive Overall and by Race and Ethnicity.docx",
+    pr_section = prop_section(
+      page_size = page_size(orient = "landscape", width = 11.7, height = 8.3))
+      )
 ```
+
+
+```{r}
+library(corrr)
+
+#Table 3: Zero-Order Correlation Matrix
+#Create Table 3: zero-order correlations among age, perceived cancer risk z-score, GrimAge2, DunedinPACE 
+#In meeting more variables were discussed* confirm for matrix
+
+#Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with emphasis on outcomes and exposure ()
+
+#using corrr package to create correlation matrix
+Correlation_Matrix <- vars %>%
+  correlate(method = "pearson", use = "pairwise.complete.obs") %>%
+  shave()
+
+# Rename all columns except term to numbers to avoid repition of variable names
+names(Correlation_Matrix)[-1] <- as.character(1:6)
+print(Correlation_Matrix, digits = 3)
+
+#formatting changes (showing 3 digits for p-values)
+Correlation_Matrix_fmt <- Correlation_Matrix %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), "", formatC(., format = "f", digits = 3))))
+
+flextable(Correlation_Matrix_fmt) %>%
+  autofit() %>%
+  save_as_docx(path = "Table_4_Correlation_Matrix.docx")
+```
+
+```{r}
+
+#Multiple imputation 
+
+# Loading packages
+library(tidyverse)    # Data wrangling and visualization
+library(mice)         # Multiple imputation
+library(missRanger)   # Random forest imputation
+library(VIM)
+
+# Set seed for reproducibility
+set.seed(0864)
+
+# Load dataset
+data_dir  <- file.path(project_dir, "Data")
+output_dir  <- file.path(project_dir, "Output")
+analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
+library(dplyr)
+
+# Compiling relevant confounders in vector
+# i.e. subsetting the data to include the two standardized outcomes, 
+# the standardized exposure, the moderator and the 11 covariates
+midus_vars <- midus_data[ , c("grimage2_STD", "dunedinpace_STD", "cancerrisk_STD",
+                 "race_eth", "age", "sex", "education", "income",
+                 "smoking", "bmi", "marital", "famcancer")]
+
+confounders <- confounders <- c("age", "sex", "education", "income",
+  "smoking", "bmi", "famcancer", "marital")
+
+# Summarizing missing data
+md.pattern(midus_data) # Counting number of NA
+# Pattern summary: 1087 rows of 1156 that are complete. 
+
+md.pairs(midus_data) # Determining four missing patterns
+# Looking at mr / rm values helps understand which values have overlapping data
+# to make them eligible for calculating imputations. 
+
+missing_summary <- function(data, vars) {
+  data %>%
+    summarise(
+      across(
+        all_of(vars), #across all the given vars
+        ~ mean(is.na(.x)) * 100 # percentage of variables w/ missing values
+      )
+    ) %>% #create a data set w/ names - variable names, values - percent missing
+    pivot_longer(
+      cols = everything(),
+      names_to = "variable",
+      values_to = "percent_missing"
+    )
+}
+# missing_summary 
+
+missing_summary(midus_data, confounders)
+
+# Generating predictor matrix
+quickpred(midus_vars)
+
+# Creating a methods object
+midus_methods <- make.method(midus_vars[confounders]) 
+midus_methods
+
+# Assigning new methods to categorical variables
+midus_methods["education"] <- "polyreg"
+midus_methods["famcancer"] <- "logreg"
+midus_methods["marital"] <- "polyreg"
+
+# Separate the variables we want to impute from the variables we want to keep.
+# Here, only the confounders are sent to mice().
+
+to_imp <- midus_data%>% #data cleaning w/ pipe operator 
+  select(all_of(confounders))
+to_imp #selects the missing values 
+
+keep <- midus_data %>%
+  select(-all_of(confounders)) #data w/out cofounders
+keep 
+
+
+imp <- mice(
+  to_imp, # data: what we want to impute
+  m = 20, # number of imputations to perform
+  seed = 0864,
+  printFlag = FALSE,
+  method = midus_methods
+)
+
+# Extract the first completed imputed dataset
+df_mice_completed <- complete(imp, action = 1)
+df_mice_completed
+
+# Combine the non-imputed variables with the imputed confounders
+df_mice_imputed <- keep %>%
+  bind_cols(df_mice_completed) #binding
+
+
+missing_summary(df_mice_imputed, confounders)
+
+#View(df_mice_imputed) this is our data frame 
+#confirms no missing values - all 0 
+
+############################################################
+# 8. Optional: compare original, missing, and imputed missingness
+############################################################
+
+#missing_compare <- bind_rows(
+#  missing_summary(midus_data, confounders) %>%
+#    mutate(dataset = "Original midus data"),
+  
+#  missing_summary(df_mice_imputed, confounders) %>%
+#    mutate(dataset = "Midus after mice imputation"))
+
+#missing_compare %>%
+#  select(dataset, variable, percent_missing)
+
+```
+
 
 ```{r}
 
