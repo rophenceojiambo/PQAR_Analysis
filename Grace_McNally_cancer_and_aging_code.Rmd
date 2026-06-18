@@ -275,206 +275,147 @@ flextable(Correlation_Matrix_fmt) %>%
 
 ```{r}
 
-#Multiple imputation 
+# 1. LIBRARY LOADING & ENVIRONMENT SETUP
+# ==============================================================================
 
-# Loading packages
-library(tidyverse)    # Data wrangling and visualization
-library(mice)         # Multiple imputation
-library(missRanger)   # Random forest imputation
-library(VIM)
+#install.packages("VIM")
 
-# Set seed for reproducibility
+# Load required packages
+library(tidyverse)    # Collection of packages for data wrangling and visualization
+library(mice)         # Functions for Multivariate Imputation by Chained Equations
+library(missRanger)   # Fast random forest imputation utility
+library(VIM)          # Visualization and Imputation of Missing Values
+library(dplyr)        # Explicitly loading dplyr (included in tidyverse)
+
+# Set seed to ensure the random number generation (and results) are reproducible
 set.seed(0864)
 
-# Load dataset
-data_dir  <- file.path(project_dir, "Data")
-output_dir  <- file.path(project_dir, "Output")
+# Define working directory paths for file management
+project_dir   <- getwd()
+data_dir      <- file.path(project_dir, "Data")
+output_dir    <- file.path(project_dir, "Output")
 analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
-library(dplyr)
 
-# Compiling relevant confounders in vector
-# i.e. subsetting the data to include the two standardized outcomes, 
-# the standardized exposure, the moderator and the 11 covariates
+# ==============================================================================
+# 2. DATA SUBSETTING & VARIABLE TYPE COERCION
+# ==============================================================================
+
+# Subset the dataset to include specific continuous outcomes/exposures and categorical covariates
 midus_vars <- midus_data[ , c("grimage2_STD", "dunedinpace_STD", "cancerrisk_STD",
-                 "race_eth", "age", "sex", "education", "income",
-                 "smoking", "bmi", "marital", "famcancer")]
+                             "race_eth", "age", "sex", "education", "income",
+                             "smoking", "bmi", "marital", "famcancer")] %>% 
+  # Explicitly convert categorical variables into factors for proper mice package handling
+  mutate(race_eth  = factor(race_eth), 
+        age        = factor(age),
+        sex        = factor(sex),
+        education  = factor(education, ordered = TRUE), # Set education as an ordered factor
+        income     = factor(income), 
+        smoking    = factor(smoking), 
+        bmi        = factor(bmi), 
+        marital    = factor(marital), 
+        famcancer  = factor(famcancer))
 
+# Define a character vector of the specific baseline confounding variables to evaluate/impute
 confounders <- confounders <- c("age", "sex", "education", "income",
   "smoking", "bmi", "famcancer", "marital")
 
-# Summarizing missing data
+# ==============================================================================
+# 3. MISSING DATA DIAGNOSTICS & EXPLORATION
+# ==============================================================================
+
+# Display the missing data pattern matrix (shows combinations of missing/observed fields)
 md.pattern(midus_data) # Counting number of NA
-# Pattern summary: 1087 rows of 1156 that are complete. 
 
-md.pairs(midus_data) # Determining four missing patterns
-# Looking at mr / rm values helps understand which values have overlapping data
-# to make them eligible for calculating imputations. 
+# Display pairs of missing/observed variables to find co-missingness patterns
+md.pairs(midus_data) 
 
+# Custom function to calculate the percentage of missing values per specified variable
 missing_summary <- function(data, vars) {
   data %>%
     summarise(
       across(
-        all_of(vars), #across all the given vars
-        ~ mean(is.na(.x)) * 100 # percentage of variables w/ missing values
+        all_of(vars),            # Apply function across all specified target variables
+        ~ mean(is.na(.x)) * 100  # Calculate percentage of NA values
       )
-    ) %>% #create a data set w/ names - variable names, values - percent missing
+    ) %>% 
+    # Reshape data from wide to long format for easier reading/plotting
     pivot_longer(
       cols = everything(),
       names_to = "variable",
       values_to = "percent_missing"
     )
 }
-# missing_summary 
 
+# Run the missingness summary function on the baseline midus_data for the confounders
 missing_summary(midus_data, confounders)
 
-# Generating predictor matrix
-quickpred(midus_vars)
+# ==============================================================================
+# 4. IMPUTATION CONFIGURATION (PREDICTOR MATRIX & METHODS)
+# ==============================================================================
 
-# Creating a methods object
+# Dry-run mice with 0 iterations to generate the default predictor tracking matrix
+pred <- mice(midus_vars, maxit = 0)$predictorMatrix 
+
+# Create a default imputation methods vector based on the dataframe structure
 midus_methods <- make.method(midus_vars[confounders]) 
 midus_methods
 
-# Assigning new methods to categorical variables
-midus_methods["education"] <- "polyreg"
-midus_methods["famcancer"] <- "logreg"
-midus_methods["marital"] <- "polyreg"
+# Manually override and assign specific imputation algorithms for categorical variables
+midus_methods["education"] <- "polyreg" # Polytomous logistic regression (ordered/unordered factors)
+midus_methods["famcancer"] <- "logreg"  # Logistic regression (binary variables)
+midus_methods["marital"]   <- "polyreg" # Polytomous logistic regression (unordered factors)
 
-# Separate the variables we want to impute from the variables we want to keep.
-# Here, only the confounders are sent to mice().
+# ==============================================================================
+# 5. DATA PARTITIONING & MULTIPLE IMPUTATION RUN
+# ==============================================================================
 
-to_imp <- midus_data%>% #data cleaning w/ pipe operator 
+# Isolate only the confounding variables slated for imputation
+to_imp <- midus_data %>% 
   select(all_of(confounders))
-to_imp #selects the missing values 
+to_imp 
 
+# Isolate all remaining variables that should be preserved without change
 keep <- midus_data %>%
-  select(-all_of(confounders)) #data w/out cofounders
-keep 
+  select(-all_of(confounders)) 
+keep  
 
-
+# Execute the Multivariate Imputation by Chained Equations (MICE)
 imp <- mice(
-  to_imp, # data: what we want to impute
-  m = 20, # number of imputations to perform
-  seed = 0864,
-  printFlag = FALSE,
-  method = midus_methods
+  to_imp,                # The targeted dataframe containing variables to impute
+  m = 20,                # Number of unique imputed datasets to generate
+  seed = 0864,           # Local seed for imputation routine consistency
+  printFlag = FALSE,     # Suppress the console printout history of iterations
+  method = midus_methods # Use our custom-defined variable imputation methods
 )
 
-# Extract the first completed imputed dataset
+# ==============================================================================
+# 6. POST-IMPUTATION RECONSTRUCTION & VERIFICATION
+# ==============================================================================
+
+# Extract the very first completely filled dataset out of the 20 generated
 df_mice_completed <- complete(imp, action = 1)
 df_mice_completed
 
-# Combine the non-imputed variables with the imputed confounders
+# Column-bind the untouched 'keep' variables back together with the newly imputed variables
 df_mice_imputed <- keep %>%
-  bind_cols(df_mice_completed) #binding
+  bind_cols(df_mice_completed)
 
-
+# Re-run missing summary on the new dataset to verify the missingness dropped to 0%
 missing_summary(df_mice_imputed, confounders)
 
-#View(df_mice_imputed) this is our data frame 
-#confirms no missing values - all 0 
+# ==============================================================================
+# 7. OPTIONAL: DIAGNOSTIC COMPARISON (PRE vs. POST IMPUTATION)
+# ==============================================================================
 
-############################################################
-# 8. Optional: compare original, missing, and imputed missingness
-############################################################
+# # Combine pre-imputation and post-imputation missing metrics for side-by-side comparison
+# missing_compare <- bind_rows(
+#   missing_summary(midus_data, confounders) %>%
+#     mutate(dataset = "Original midus data"),
+#   
+#   missing_summary(df_mice_imputed, confounders) %>%
+#     mutate(dataset = "Midus after mice imputation"))
 
-#missing_compare <- bind_rows(
-#  missing_summary(midus_data, confounders) %>%
-#    mutate(dataset = "Original midus data"),
-  
-#  missing_summary(df_mice_imputed, confounders) %>%
-#    mutate(dataset = "Midus after mice imputation"))
-
-#missing_compare %>%
-#  select(dataset, variable, percent_missing)
-
+# # View final structural summary of data missingness before and after processing
+# missing_compare %>%
+#   select(dataset, variable, percent_missing)
 ```
-
-
-```{r}
-
-#multiple imputation 
-
-library(aplore3)      # ICU dataset
-library(tidyverse)    # Data wrangling and visualization
-library(mice)         # Multiple imputation
-library(missRanger) 
-
-
-midus_data <- readRDS("~/Desktop/PQAR_Analysis/Data/midus_cancer_aging_analysis_dataset.rds") #Canc_data: data from MIDUS cancer subproject
-set.seed(123)
-names(midus_data)
-
-# replace w/ confounders 
-confounders <- c("grimage2", "dunedinpace", "age", "sex", "race_eth", "marital",
-                 "education", "income", "num_chron") 
-
-#missing summary 
-missing_summary <- function(data, vars) {
-  data %>%
-    summarise(
-      across(
-        all_of(vars), #across all the given vars
-        ~ mean(is.na(.x)) * 100 # percentage of variables w/ missing values
-      )
-    ) %>% #create a data set w/ names - variable names, values - percent missing
-    pivot_longer(
-      cols = everything(),
-      names_to = "variable",
-      values_to = "percent_missing"
-    )
-}
-missing_summary 
-
-missing_summary(midus_data, confounders)
-
-
-# Separate the variables we want to impute from the variables we want to keep.
-# Here, only the confounders are sent to mice().
-
-to_imp <- midus_data%>% #data cleaning w/ pipe operator 
-  select(all_of(confounders))
-to_imp #selects the missing values 
-
-keep <- midus_data %>%
-  select(-all_of(confounders)) #data w/out cofounders
-keep 
-
-
-imp <- mice( 
-  to_imp, #takes in the date
-  m = 5, #number of multiple imputations, default 5 
-  maxit = 5, #max iterations
-  seed = 123, #set a seed to offset random number generator 
-  printFlag = TRUE #if true mice will print history
-)
-
-# Extract the first completed imputed dataset
-df_mice_completed <- complete(imp, action = 1)
-df_mice_completed
-
-# Combine the non-imputed variables with the imputed confounders
-df_mice_imputed <- keep %>%
-  bind_cols(df_mice_completed) #binding
-
-
-missing_summary(df_mice_imputed, confounders)
-#confirms no missing values - all 0 
-
-############################################################
-# 8. Optional: compare original, missing, and imputed missingness
-############################################################
-
-#missing_compare <- bind_rows(
-#  missing_summary(midus_data, confounders) %>%
-#    mutate(dataset = "Original midus data"),
-  
-#  missing_summary(df_mice_imputed, confounders) %>%
-#    mutate(dataset = "Midus after mice imputation"))
-
-#missing_compare %>%
-#  select(dataset, variable, percent_missing)
-
-
-```
-
