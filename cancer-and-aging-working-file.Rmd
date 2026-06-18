@@ -240,7 +240,7 @@ library(dplyr)
 library(corrr)
 library(flextable)
 #select variables of interest
-vars <- MIDUS_data %>%
+vars <- midus_data %>%
   select(age, grimage2, dunedinpace, num_chron, cancerrisk, efficacy)
 
 Correlation_Matrix <- vars %>%
@@ -258,7 +258,7 @@ Correlation_Matrix_fmt <- Correlation_Matrix %>%
 
 flextable(Correlation_Matrix_fmt) %>%
   autofit() %>%
-  save_as_docx(path = "Table_4_Correlation_Matrix.docx")
+  save_as_docx(path = "Output/Table_4_Correlation_Matrix.docx")
 ```
 
 ```{r}
