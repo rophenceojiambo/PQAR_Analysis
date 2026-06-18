@@ -244,23 +244,21 @@ library(corrr)
 
 #Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with emphasis on outcomes and exposure ()
 
-#using misty package to create correlation matrix
-Correlation_Matrix <- cor.matrix(midus_data, age, grimage2, dunedinpace, age, num_chron, cancerrisk, efficacy,
-           method = "pearson",
-           na.omit = FALSE, sig = FALSE, alpha = 0.05,
-           print = c("cor", "p"),
-           tri = "lower",
-           p.adj = "none",
-           digits = 1, p.digits = 3)
+#using corrr package to create correlation matrix
+Correlation_Matrix <- vars %>%
+  correlate(method = "pearson", use = "pairwise.complete.obs") %>%
+  shave()
 
-#Formatting of row names and convert it to a data frame
-table_4_data <- Correlation_Matrix$matrix %>% 
-  as.data.frame() %>% 
-  rownames_to_column(var = "Variable")
+# Rename all columns except term to numbers to avoid repition of variable names
+names(Correlation_Matrix)[-1] <- as.character(1:6)
+print(Correlation_Matrix, digits = 3)
 
-#save as word
-flextable(table_4_data) %>% 
-  autofit() %>%  #formatting
+#formatting changes (showing 3 digits for p-values)
+Correlation_Matrix_fmt <- Correlation_Matrix %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), "", formatC(., format = "f", digits = 3))))
+
+flextable(Correlation_Matrix_fmt) %>%
+  autofit() %>%
   save_as_docx(path = "Table_4_Correlation_Matrix.docx")
 ```
 
