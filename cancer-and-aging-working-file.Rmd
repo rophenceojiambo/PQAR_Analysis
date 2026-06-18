@@ -348,3 +348,96 @@ flextable(table_4_data) %>%
   save_as_docx(path = "Table_4_Correlation_Matrix.docx")
 ```
 
+```{r}
+
+#Multiple imputation 
+
+
+#multiple imputation 
+
+library(aplore3)      # ICU dataset
+library(tidyverse)    # Data wrangling and visualization
+library(mice)         # Multiple imputation
+library(missRanger) 
+
+
+midus_data <- readRDS("~/Desktop/PQAR_Analysis/Data/midus_cancer_aging_analysis_dataset.rds") #Canc_data: data from MIDUS cancer subproject
+set.seed(123)
+names(midus_data)
+
+# replace w/ confounders 
+confounders <- c("grimage2", "dunedinpace", "age", "sex", "race_eth", "marital",
+                 "education", "income", "num_chron") 
+
+#missing summary 
+missing_summary <- function(data, vars) {
+  data %>%
+    summarise(
+      across(
+        all_of(vars), #across all the given vars
+        ~ mean(is.na(.x)) * 100 # percentage of variables w/ missing values
+      )
+    ) %>% #create a data set w/ names - variable names, values - percent missing
+    pivot_longer(
+      cols = everything(),
+      names_to = "variable",
+      values_to = "percent_missing"
+    )
+}
+missing_summary 
+
+missing_summary(midus_data, confounders)
+
+
+# Separate the variables we want to impute from the variables we want to keep.
+# Here, only the confounders are sent to mice().
+
+to_imp <- midus_data%>% #data cleaning w/ pipe operator 
+  select(all_of(confounders))
+to_imp #selects the missing values 
+
+keep <- midus_data %>%
+  select(-all_of(confounders)) #data w/out cofounders
+keep 
+
+
+imp <- mice( 
+  to_imp, #takes in the date
+  m = 5, #number of multiple imputations, default 5 
+  maxit = 5, #max iterations
+  seed = 123, #set a seed to offset random number generator 
+  printFlag = TRUE #if true mice will print history
+)
+
+# Extract the first completed imputed dataset
+df_mice_completed <- complete(imp, action = 1)
+df_mice_completed
+
+# Combine the non-imputed variables with the imputed confounders
+df_mice_imputed <- keep %>%
+  bind_cols(df_mice_completed) #binding
+
+
+missing_summary(df_mice_imputed, confounders)
+
+#View(df_mice_imputed) this is our data frame 
+#confirms no missing values - all 0 
+
+############################################################
+# 8. Optional: compare original, missing, and imputed missingness
+############################################################
+
+#missing_compare <- bind_rows(
+#  missing_summary(midus_data, confounders) %>%
+#    mutate(dataset = "Original midus data"),
+  
+#  missing_summary(df_mice_imputed, confounders) %>%
+#    mutate(dataset = "Midus after mice imputation"))
+
+#missing_compare %>%
+#  select(dataset, variable, percent_missing)
+
+```
+
+
+
