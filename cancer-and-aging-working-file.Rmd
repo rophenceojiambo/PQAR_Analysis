@@ -187,51 +187,72 @@ library(gtsummary)
 library(gt)
 
 
+
 table3 <- midus_data %>%
-  select(race_eth, grimage2, dunedinpace, bmi, age, 
-         sex, marital, education, income, num_chron, 
-         smoking, alcohol, famcancer, cancerrisk, efficacy) %>%
-  tbl_summary(
-    by = race_eth,
-    type = list(
-      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous2"
-    ), #continuous 2 splits into N and Mean (SD) rows 
-    # Define the exact layout styles from your example image
-    statistic = list(
-      all_continuous() ~ c("{N_nonmiss}", "{mean} ({sd})"), # Separate rows for N and Mean
-      all_categorical() ~ "{n} ({p}%)"                # Clean fraction format
+  select(age, sex, race_eth, marital, education, income, num_chron, famcancer, efficacy, 
+         smoking, alcohol, bmi, cancerrisk, grimage2, dunedinpace) %>%
+
+tbl_summary(by = race_eth,
+   type = list(
+      # Quantitative (Continuous) Variables
+      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous",
+      # Categorical Variables
+      c(sex, marital, education, smoking, alcohol, famcancer) ~ "categorical"),
+
+    statistic = list( 
+      all_continuous() ~ "{mean} ({sd})",   # Removed the c() wrapper
+      all_categorical() ~ "{n} ({p}%)" 
     ),
+
+    missing = "ifany",
+    missing_stat = "{N_miss} ({p_miss}%)",  # this adds the frequency and % missing
+    missing_text = "Missing", 
+    digits = all_continuous() ~ 1, 
+
     #hiding missing values??
-    missing = "ifany", 
     #applying clear labels 
     
     #do we want to use all these variables?? 
-    label = list(
-      grimage2 ~ "GrimAge", #outcomes 
-      dunedinpace ~ "DunedinPACE", #outcomes 
-      bmi ~ "BMI (kg/m²)",
-      age ~ "Patient Age",
+   label = list(
+      grimage2 ~ "GrimAge2", 
+      dunedinpace ~ "DunedinPACE", 
+      bmi ~ "Body mass index (kg/m²)",
+      age ~ "Age",
       sex ~ "Sex",
-      marital ~ "Marital Status",
-      education ~ "Education Level",
-      income ~ "Annual Income ($)",
-      num_chron ~ "Number of Chronic Conditions",
-      smoking ~ "Smoking Status",
-      alcohol ~ "Alcohol Consumption",
-      famcancer ~ "Family History of Cancer",
-      cancerrisk ~ "Cancer Risk Score", #is this the perceived cancer risk?
-      efficacy ~ "Self-Efficacy Score")
-    
-  )%>%
-  add_n() %>% 
-  add_p() %>%
+      marital ~ "Marital status",
+      education ~ "Education attainment",
+      income ~ "Annual household income",
+      num_chron ~ "Number of chronic Conditions",
+      smoking ~ "Smoking status",
+      alcohol ~ "Alcohol consumption",
+      famcancer ~ "Family cancer history",
+      cancerrisk ~ "Perceived cancer risk", 
+      efficacy ~ "Self-efficacy for cancer prevention"))  %>% 
+  add_overall() %>% 
+      add_p(
+    test = list(
+      all_categorical() ~ "chisq.test",
+      all_continuous() ~ "kruskal.test"
+    ),
+    test.args = list( 
+      all_tests("chisq.test") ~ list(simulate.p.value = TRUE, B = 2000)),
+    pvalue_fun = ~ style_pvalue(.x, digits = 3)
+  ) %>%
   add_stat_label() %>%
   bold_labels() %>%
-  as_gt()%>%
-  gt::tab_header(
-    title = gt::md("**Table 3. Treatment Differences**")) 
+  modify_caption("Table 3: Descriptive Statistics Overall and Stratified by Race and Ethnicity")
 
 table3
+
+table3 %>% 
+  as_flex_table() %>%
+  set_table_properties(layout = "autofit", width = 1) %>%
+  save_as_docx(
+    path = "Output/Table 3 Descriptive Overall and by Race and Ethnicity.docx",
+    pr_section = prop_section(
+      page_size = page_size(orient = "landscape", width = 11.7, height = 8.3))
+      )
+
 ```
 
 
