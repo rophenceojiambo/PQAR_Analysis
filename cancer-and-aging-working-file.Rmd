@@ -236,24 +236,23 @@ table3
 
 
 ```{r}
+library(dplyr)
 library(corrr)
+library(flextable)
+#select variables of interest
+vars <- MIDUS_data %>%
+  select(age, grimage2, dunedinpace, num_chron, cancerrisk, efficacy)
 
-#Table 3: Zero-Order Correlation Matrix
-#Create Table 3: zero-order correlations among age, perceived cancer risk z-score, GrimAge2, DunedinPACE 
-#In meeting more variables were discussed* confirm for matrix
-
-#Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with emphasis on outcomes and exposure ()
-
-#using corrr package to create correlation matrix
 Correlation_Matrix <- vars %>%
   correlate(method = "pearson", use = "pairwise.complete.obs") %>%
   shave()
 
-# Rename all columns except term to numbers to avoid repition of variable names
+# Rename all columns except term to numbers
 names(Correlation_Matrix)[-1] <- as.character(1:6)
+
 print(Correlation_Matrix, digits = 3)
 
-#formatting changes (showing 3 digits for p-values)
+#formatting changes
 Correlation_Matrix_fmt <- Correlation_Matrix %>%
   mutate(across(where(is.numeric), ~ ifelse(is.na(.), "", formatC(., format = "f", digits = 3))))
 
