@@ -1,3 +1,16 @@
+---
+title: "PQAR 2026 Research Project"
+output: rmd
+date: "2026-06-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
 library(readr)
 library(gtsummary)
 library(tidyverse)
@@ -52,7 +65,9 @@ midus_table_1 <- midus_data %>%
 # 4. Save your basic table to a Word Document
 as_gt(midus_table_1) %>% 
   gt::gtsave(filename = "midus_table_1_basic.docx")
+```
 
+```{r}
 
 #Table 2 
 #need to add p value
@@ -99,7 +114,96 @@ table1 <- midus_data %>%
   )%>%
   bold_labels()
 
-table1   
+table2  
 
-as_gt(table1) %>% 
+as_gt(table2) %>% 
   gt::gtsave(filename = "midus_table_1_final.docx")
+```
+
+```{r}
+
+#multiple imputation 
+
+library(aplore3)      # ICU dataset
+library(tidyverse)    # Data wrangling and visualization
+library(mice)         # Multiple imputation
+library(missRanger) 
+
+
+midus_data <- readRDS("~/Desktop/PQAR_Analysis/Data/midus_cancer_aging_analysis_dataset.rds") #Canc_data: data from MIDUS cancer subproject
+set.seed(123)
+names(midus_data)
+
+# replace w/ confounders 
+confounders <- c("grimage2", "dunedinpace", "age", "sex", "race_eth", "marital",
+                 "education", "income", "num_chron") 
+
+#missing summary 
+missing_summary <- function(data, vars) {
+  data %>%
+    summarise(
+      across(
+        all_of(vars), #across all the given vars
+        ~ mean(is.na(.x)) * 100 # percentage of variables w/ missing values
+      )
+    ) %>% #create a data set w/ names - variable names, values - percent missing
+    pivot_longer(
+      cols = everything(),
+      names_to = "variable",
+      values_to = "percent_missing"
+    )
+}
+missing_summary 
+
+missing_summary(midus_data, confounders)
+
+
+# Separate the variables we want to impute from the variables we want to keep.
+# Here, only the confounders are sent to mice().
+
+to_imp <- midus_data%>% #data cleaning w/ pipe operator 
+  select(all_of(confounders))
+to_imp #selects the missing values 
+
+keep <- midus_data %>%
+  select(-all_of(confounders)) #data w/out cofounders
+keep 
+
+
+imp <- mice( 
+  to_imp, #takes in the date
+  m = 5, #number of multiple imputations, default 5 
+  maxit = 5, #max iterations
+  seed = 123, #set a seed to offset random number generator 
+  printFlag = TRUE #if true mice will print history
+)
+
+# Extract the first completed imputed dataset
+df_mice_completed <- complete(imp, action = 1)
+df_mice_completed
+
+# Combine the non-imputed variables with the imputed confounders
+df_mice_imputed <- keep %>%
+  bind_cols(df_mice_completed) #binding
+
+
+missing_summary(df_mice_imputed, confounders)
+#confirms no missing values - all 0 
+
+############################################################
+# 8. Optional: compare original, missing, and imputed missingness
+############################################################
+
+#missing_compare <- bind_rows(
+#  missing_summary(midus_data, confounders) %>%
+#    mutate(dataset = "Original midus data"),
+  
+#  missing_summary(df_mice_imputed, confounders) %>%
+#    mutate(dataset = "Midus after mice imputation"))
+
+#missing_compare %>%
+#  select(dataset, variable, percent_missing)
+
+
+```
+
