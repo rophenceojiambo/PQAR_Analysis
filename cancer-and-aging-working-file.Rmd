@@ -77,51 +77,51 @@ library(dplyr)
  # midus_data <- readRDS("~/Desktop/PQAR_Analysis/Data/midus_cancer_aging_analysis_dataset.rds") #Canc_data: data from MIDUS cancer subproject (edited by Ria - added new code for file path)
 
 analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
-Canc_data <- readRDS(analysis_path)
+midus_data <- readRDS(analysis_path)
 
-glimpse(Canc_data)
+glimpse(midus_data)
 
 
-  # Setting variables for data table
-  age <- Canc_data$age 
-  sex <- Canc_data$sex 
-  edu <- Canc_data$education 
-  income <- Canc_data$income 
-  race_ethn <- Canc_data$race_eth 
-  mar_stat <- Canc_data$marital
-  bmi <- Canc_data$bmi
-  grimage2 <- Canc_data$grimage2_STD
-  dunedinpace <- Canc_data$dunedinpace_STD
-  num_chron <- Canc_data$num_chron
-  smoking <- Canc_data$smoking
-  alcohol <- Canc_data$alcohol
-  famcancer <- Canc_data$famcancer
-  cancerrisk <- Canc_data$cancerrisk
-  self_efficacy <- Canc_data$efficacy
-  
-  
-  # Create dataframe based on given variables
-  df1 <- data.frame(age, race_ethn, sex, mar_stat, edu, income, bmi, grimage2, dunedinpace, num_chron, smoking, alcohol, famcancer, cancerrisk, self_efficacy)
+  # # Setting variables for data table
+  # age <- Canc_data$age 
+  # sex <- Canc_data$sex 
+  # edu <- Canc_data$education 
+  # income <- Canc_data$income 
+  # race_ethn <- Canc_data$race_eth 
+  # mar_stat <- Canc_data$marital
+  # bmi <- Canc_data$bmi
+  # grimage2 <- Canc_data$grimage2_STD
+  # dunedinpace <- Canc_data$dunedinpace_STD
+  # num_chron <- Canc_data$num_chron
+  # smoking <- Canc_data$smoking
+  # alcohol <- Canc_data$alcohol
+  # famcancer <- Canc_data$famcancer
+  # cancerrisk <- Canc_data$cancerrisk
+  # self_efficacy <- Canc_data$efficacy
+  # 
+  # 
+  # # Create dataframe based on given variables
+  # df1 <- data.frame(age, race_ethn, sex, mar_stat, edu, income, bmi, grimage2, dunedinpace, num_chron, smoking, alcohol, famcancer, cancerrisk, self_efficacy)
   
 # Adding descriptive labels to data frame
 
-  var_label(df1$age) <- "Age"
-  var_label(df1$sex) <- "Sex"
-  var_label(df1$mar_stat) <- "Marital Status"
-  var_label(df1$edu) <- "Education"
-  var_label(df1$income) <- "Income"
-  var_label(df1$bmi) <- "BMI"
-  var_label(df1$race_ethn) <- "Race and Ethnicity"
-  var_label(df1$grimage2) <- "GrimAge2"
-  var_label(df1$dunedinpace) <- "DunedinPACE"
-  var_label(df1$num_chron) <- "Number of Chronic Conditions"
-  var_label(df1$smoking) <- "Smoking Status"
-  var_label(df1$alcohol) <- "Alcohol Consumption"
-  var_label(df1$famcancer) <- "Family Cancer History"
-  var_label(df1$self_efficacy) <- "Self Efficacy"
-  var_label(df1$cancerrisk) <- "Perceived Cancer Risk"
-  colnames(df1) <- Hmisc::label(df1) # Assigning new labels to data frame
-  glimpse(df1) 
+  # var_label(df1$age) <- "Age"
+  # var_label(df1$sex) <- "Sex"
+  # var_label(df1$mar_stat) <- "Marital Status"
+  # var_label(df1$edu) <- "Education"
+  # var_label(df1$income) <- "Income"
+  # var_label(df1$bmi) <- "BMI"
+  # var_label(df1$race_ethn) <- "Race and Ethnicity"
+  # var_label(df1$grimage2) <- "GrimAge2"
+  # var_label(df1$dunedinpace) <- "DunedinPACE"
+  # var_label(df1$num_chron) <- "Number of Chronic Conditions"
+  # var_label(df1$smoking) <- "Smoking Status"
+  # var_label(df1$alcohol) <- "Alcohol Consumption"
+  # var_label(df1$famcancer) <- "Family Cancer History"
+  # var_label(df1$self_efficacy) <- "Self Efficacy"
+  # var_label(df1$cancerrisk) <- "Perceived Cancer Risk"
+  # colnames(df1) <- Hmisc::label(df1) # Assigning new labels to data frame
+  # glimpse(df1) 
 ```
 
 
@@ -329,7 +329,7 @@ library(corrr)
 #Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with emphasis on outcomes and exposure ()
 
 #using misty package to create correlation matrix
-Correlation_Matrix <- cor.matrix(MIDUS_data, age, grimage2, dunedinpace, age, num_chron, cancerrisk, efficacy,
+Correlation_Matrix <- cor.matrix(midus_data, age, grimage2, dunedinpace, age, num_chron, cancerrisk, efficacy,
            method = "pearson",
            na.omit = FALSE, sig = FALSE, alpha = 0.05,
            print = c("cor", "p"),
@@ -347,4 +347,123 @@ flextable(table_4_data) %>%
   autofit() %>%  #formatting
   save_as_docx(path = "Table_4_Correlation_Matrix.docx")
 ```
+
+```{r}
+
+#Multiple imputation 
+
+# Loading packages
+library(tidyverse)    # Data wrangling and visualization
+library(mice)         # Multiple imputation
+library(missRanger)   # Random forest imputation
+library(VIM)
+
+# Set seed for reproducibility
+set.seed(0864)
+
+# Load dataset
+data_dir  <- file.path(project_dir, "Data")
+output_dir  <- file.path(project_dir, "Output")
+analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
+library(dplyr)
+
+# Compiling relevant confounders in vector
+# i.e. subsetting the data to include the two standardized outcomes, 
+# the standardized exposure, the moderator and the 11 covariates
+midus_vars <- midus_data[ , c("grimage2_STD", "dunedinpace_STD", "cancerrisk_STD",
+                 "race_eth", "age", "sex", "education", "income",
+                 "smoking", "bmi", "marital", "famcancer")]
+
+confounders <- confounders <- c("age", "sex", "education", "income",
+  "smoking", "bmi", "famcancer", "marital")
+
+# Summarizing missing data
+md.pattern(midus_data) # Counting number of NA
+# Pattern summary: 1087 rows of 1156 that are complete. 
+
+md.pairs(midus_data) # Determining four missing patterns
+# Looking at mr / rm values helps understand which values have overlapping data
+# to make them eligible for calculating imputations. 
+
+missing_summary <- function(data, vars) {
+  data %>%
+    summarise(
+      across(
+        all_of(vars), #across all the given vars
+        ~ mean(is.na(.x)) * 100 # percentage of variables w/ missing values
+      )
+    ) %>% #create a data set w/ names - variable names, values - percent missing
+    pivot_longer(
+      cols = everything(),
+      names_to = "variable",
+      values_to = "percent_missing"
+    )
+}
+# missing_summary 
+
+missing_summary(midus_data, confounders)
+
+# Generating predictor matrix
+quickpred(midus_vars)
+
+# Creating a methods object
+midus_methods <- make.method(midus_vars[confounders]) 
+midus_methods
+
+# Assigning new methods to categorical variables
+midus_methods["education"] <- "polyreg"
+midus_methods["famcancer"] <- "logreg"
+midus_methods["marital"] <- "polyreg"
+
+# Separate the variables we want to impute from the variables we want to keep.
+# Here, only the confounders are sent to mice().
+
+to_imp <- midus_data%>% #data cleaning w/ pipe operator 
+  select(all_of(confounders))
+to_imp #selects the missing values 
+
+keep <- midus_data %>%
+  select(-all_of(confounders)) #data w/out cofounders
+keep 
+
+
+imp <- mice(
+  to_imp, # data: what we want to impute
+  m = 20, # number of imputations to perform
+  seed = 0864,
+  printFlag = FALSE,
+  method = midus_methods
+)
+
+# Extract the first completed imputed dataset
+df_mice_completed <- complete(imp, action = 1)
+df_mice_completed
+
+# Combine the non-imputed variables with the imputed confounders
+df_mice_imputed <- keep %>%
+  bind_cols(df_mice_completed) #binding
+
+
+missing_summary(df_mice_imputed, confounders)
+
+#View(df_mice_imputed) this is our data frame 
+#confirms no missing values - all 0 
+
+############################################################
+# 8. Optional: compare original, missing, and imputed missingness
+############################################################
+
+#missing_compare <- bind_rows(
+#  missing_summary(midus_data, confounders) %>%
+#    mutate(dataset = "Original midus data"),
+  
+#  missing_summary(df_mice_imputed, confounders) %>%
+#    mutate(dataset = "Midus after mice imputation"))
+
+#missing_compare %>%
+#  select(dataset, variable, percent_missing)
+
+```
+
+
 
