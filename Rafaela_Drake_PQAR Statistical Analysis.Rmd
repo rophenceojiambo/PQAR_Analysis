@@ -1,0 +1,175 @@
+---
+title: "PQAR Statistical Analysis"
+author: "Rafaela Drake"
+date: "2026-06-12"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r}
+#loading data (MIDUS Study)
+getwd()
+MIDUS_data <-readRDS("~/PQAR 2026/Research Project/midus_cancer_aging_analysis_dataset.rds")
+View(MIDUS_data)
+dim(MIDUS_data)
+
+colnames(MIDUS_data)
+
+#Install and load packages: tidyverse, gtsummary, flextable, broom, officer, mice, corrr, tibble, misty
+library(tidyverse)
+library(gtsummary)
+library(flextable)
+library(broom)
+library(officer)
+library(mice)
+library(corrr)
+library(tibble)
+library(misty)
+
+#package used for Latex (knitting to PDF for Mac)
+library(tinytex)
+
+#data from each column (variable)
+univariate_stats <- MIDUS_data %>% select(grimage2:efficacy_STD)
+#adds label of what summary value is produced (dependent on data type)
+uni_labs <- list(
+  grimage2        ~ "GrimAge2 (Epigenetic Age), mean (SD)",
+  dunedinpace     ~ "DunedinPACE (Pace of Aging), mean (SD)",
+  bmi             ~ "Body Mass Index (BMI), mean (SD)",
+  age             ~ "Chronological Age (years), mean (SD)",
+  sex             ~ "Sex, No. (%)",
+  race_eth        ~ "Race/Ethnicity, No. (%)",
+  marital         ~ "Marital Status, No. (%)",
+  education       ~ "Educational Attainment, No. (%)",
+  income          ~ "Annual Household Income, mean (SD)",
+  num_chron       ~ "Number of Chronic Conditions, mean (SD)",
+  smoking         ~ "Smoking Status, No. (%)",
+  alcohol         ~ "Alcohol Consumption, No. (%)",
+  famcancer       ~ "Family History of Cancer, No. (%)",
+  cancer_history  ~ "Personal Cancer History, mean (SD)",
+  cancerrisk      ~ "Perceived Cancer Risk, mean (SD)",
+  efficacy        ~ "Cancer Prevention Self-Efficacy, mean (SD)",
+  grimage2_STD    ~ "GrimAge2 (Standardized), mean (SD)",
+  dunedinpace_STD ~ "DunedinPACE (Standardized), mean (SD)",
+  cancerrisk_STD  ~ "Perceived Cancer Risk (Standardized), mean (SD)",
+  efficacy_STD    ~ "Cancer Prevention Self-Efficacy (Standardized), mean (SD)"
+)
+#tblsummary() function to calculate values and make them into a table, digits = 3
+univariate_stats_table <- univariate_stats %>%
+  mutate(across(where(is.factor), ~ fct_explicit_na(., "Missing"))) %>%
+  tbl_summary(
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    missing_text = "Missing",
+    digits = all_continuous() ~ 1,
+    label = uni_labs
+  ) %>%
+  modify_caption("Table I. Univariate Statistics on MIDUS II Data")
+#view table
+univariate_stats_table
+
+univariate_stats_table %>%
+  as_gt() %>%
+  gt::gtsave("univariate_stats_table.docx")
+dim(MIDUS_data)
+
+#ADD
+#include p-values (add.p)
+#function add overall within table 
+
+
+#Table 4: Zero-Order Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with #emphasis on outcomes and exposure
+
+library(dplyr)
+library(corrr)
+library(flextable)
+
+Correlation_Matrix <- vars %>%
+  correlate(method = "pearson", use = "pairwise.complete.obs") %>%
+  shave()
+
+# Rename all columns except term to numbers
+names(Correlation_Matrix)[-1] <- as.character(1:6)
+
+print(Correlation_Matrix, digits = 3)
+
+#formatting changes
+Correlation_Matrix_fmt <- Correlation_Matrix %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), "", formatC(., format = "f", digits = 3))))
+
+flextable(Correlation_Matrix_fmt) %>%
+  autofit() %>%
+  save_as_docx(path = "Table_4_Correlation_Matrix.docx")
+
+# - - - - - - - - - - -METHOD 1- - - -- - - - - - 
+
+
+
+# - - - - - - - - - - -OLD METHOD- - - -- - - - - - 
+library(corrr)
+library(dplyr)
+Correlation_Matrix <- vars %>%
+  correlate(method = "pearson", use = "pairwise.complete.obs") %>%
+  shave()
+
+# Only rename the columns, leave term (row names) alone
+var_names <- c("age", "grimage2", "dunedinpace", "num_chron", "cancerrisk", "efficacy")
+num_labels <- as.character(1:6)
+
+Correlation_Matrix <- Correlation_Matrix %>%
+  rename_with(~ num_labels, all_of(var_names))  # rename columns to numbers only
+
+print(Correlation_Matrix, digits = 1)
+
+#formatting changes
+Correlation_Matrix_fmt <- Correlation_Matrix %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), "", formatC(., format = "f", digits = 3))))
+
+flextable(Correlation_Matrix_fmt) %>%
+  autofit() %>%
+  save_as_docx(path = "Table_4_Correlation_Matrix.docx")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# - - - - - - - - -- 
+vars <- MIDUS_data %>%
+  select(age, grimage2, dunedinpace, num_chron, cancerrisk, efficacy) 
+
+
+
+Correlation_Matrix <- Correlation_Matrix %>%
+  mutate(term = num_labels) %>%                        # rename rows
+  rename_with(~ num_labels, all_of(var_names))  
+
+# Compute Pearson correlation matrix
+Correlation_Matrix <- vars %>%
+  correlate(method = "pearson", use = "pairwise.complete.obs") %>%
+  shave()   # keeps lower triangle (upper becomes NA), mirrors tri = "lower"
+
+# Print rounded to 1 decimal place
+print(Correlation_Matrix, digits = 1)
+
+#save as word
+flextable(Correlation_Matrix) %>% 
+  autofit() %>%  #formatting
+  save_as_docx(path = "Table_4_Correlation_Matrix.docx")
+
+
+```
+```{r multiple imputation}
+
+```
