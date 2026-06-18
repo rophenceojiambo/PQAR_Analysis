@@ -88,7 +88,7 @@ library(corrr)
 library(flextable)
 #select variables of interest
 vars <- MIDUS_data %>%
-  select(age, grimage2, dunedinpace, num_chron, cancerrisk, efficacy)
+  select(grimage2, dunedinpace, age, num_chron, cancerrisk_STD, efficacy)
 
 Correlation_Matrix <- vars %>%
   correlate(method = "pearson", use = "pairwise.complete.obs") %>%
