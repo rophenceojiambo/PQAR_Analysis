@@ -262,7 +262,7 @@ library(dplyr)
 library(corrr)
 library(flextable)
 #select variables of interest
-vars <- MIDUS_data %>%
+vars <- midus_data %>%
   select(grimage2, dunedinpace, age, num_chron, cancerrisk_STD, efficacy)
 
 Correlation_Matrix <- vars %>%
