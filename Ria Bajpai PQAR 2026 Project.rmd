@@ -278,13 +278,10 @@ table2_cat <- df1 %>%
     missing_stat = "{N_miss} ({p_miss}%)"
   ) %>%
   # Calculate p-values
-<<<<<<< HEAD
   add_overall() %>% 
   add_p(all_categorical() ~ "chisq.test") # Unclear on how p-value is being calculated for categorical values
-=======
   add_overall() %>%  # this should not have been added, it's part of what makes Table 3, Table 2 was just stratified by race
   add_p(all_categorical() ~ "chisq.test.no.correct")  # this is wrong, some variables are continuous so you need two arguments on how to find p values for continuous and for categorical
->>>>>>> 3893fdde62756b7e99ab53f6b9218e2add6f7100
 
 
 # Merging continuous & categorical tables
