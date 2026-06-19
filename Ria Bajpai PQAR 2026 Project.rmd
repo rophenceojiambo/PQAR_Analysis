@@ -342,8 +342,81 @@ lower_values <- r_and_sig
 # Replace the upper triangle with blank spaces
 lower_values[upper.tri(lower_values, diag = FALSE)] <- ""
 
-# View the final result
-print(as.data.frame(lower_values))
+# 2. Convert matrix to data frame safely (keeping column names raw)
+df <- as.data.frame(lower_values)
+
+# 3. Create the lookup vector for mapping labels
+var_labels <- c(
+  "income"          = "Annual Income ($)",
+  "num_chron"       = "Number of Chronic Conditions",
+  "efficacy_STD"    = "Self Efficacy",
+  "grimage2_STD"    = "GrimAge2",
+  "dunedinpace_STD" = "DunedinPACE",
+  "cancerrisk_STD"  = "Perceived Cancer Risk",
+  "age"             = "Age",
+  "bmi"             = "Body Mass Index (kg/m²)"
+)
+
+# 4. Move row names into a brand-new column using the clean mapped labels
+df <- cbind(
+  Variable = var_labels[rownames(lower_values)], 
+  df
+)
+rownames(df) <- NULL  # Clear old row names index attribute
+
+# 5. Build and style the Flextable (JAMA theme)
+jama_border <- fp_border(color = "black", width = 1)
+
+jama_ft <- flextable(df) %>%
+  set_header_labels(
+    Variable        = "Variable",                  
+    income          = "Annual Income ($)",
+    num_chron       = "Number of Chronic Conditions",
+    efficacy_STD    = "Self Efficacy",
+    grimage2_STD    = "GrimAge2",
+    dunedinpace_STD = "DunedinPACE",
+    cancerrisk_STD  = "Perceived Cancer Risk",
+    age             = "Age",
+    bmi             = "Body Mass Index (kg/m²)"
+  ) %>%
+  border_remove() %>%
+  hline_top(border = jama_border, part = "header") %>%
+  hline_bottom(border = jama_border, part = "header") %>%
+  hline_bottom(border = jama_border, part = "body") %>%
+  fontsize(size = 9, part = "all") %>%
+  font(fontname = "Arial", part = "all") %>%
+  align(j = 1, align = "left", part = "all") %>%
+  align(j = 2:ncol(df), align = "center", part = "all") %>%
+  bold(part = "header") %>%
+  bold(j = 1, part = "body")
+
+# Setting jama-theme text style
+jama_title_style <- fp_text(
+  font.size = 11, 
+  bold = TRUE, 
+  font.family = "Arial"
+)
+
+jama_text_style <- fp_text(
+  font.size = 11, 
+  bold = FALSE, 
+  font.family = "Arial"
+)
+
+# Generating word doc
+doc <- read_docx() # Creates empty word document
+
+doc <- doc %>%
+  body_add_fpar(
+    fpar(
+      ftext("Table 2. ", prop = jama_title_style),
+      ftext("Zero-order correlations among perceived cancer risk and epigenetic aging measures", prop = jama_text_style)
+    )
+  ) %>%
+  body_add_flextable(jama_ft)
+
+# Exporting final output as word document
+print(doc, target = "Output/Ria_correlation_matrix.docx")
 
 ```
 
