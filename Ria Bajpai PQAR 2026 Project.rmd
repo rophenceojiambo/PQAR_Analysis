@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Installing necessary R packages
 ```{r}
+# COMMENT ON THESE LIBRARIES
 library("gtsummary")
 library("flextable")
 library("broom")
@@ -34,64 +35,20 @@ Classification of variables:
 
 # Reading in data and creating new dataframe based on demographic characteristics
 ```{r}
-# Please comment your code so that someone else can follow along, for example, the code below is getting project working directory, also don't indent your code, add a line space to separte different lines of codes
+# Please comment your code so that someone else can follow along, for example, the code below is getting project working directory, also don't indent your code, add a line space to separate different lines of codes
 
 # Get current project directory (RO)
 project_dir <- getwd()
 
 # Get data directory
-
 data_dir  <- file.path(project_dir, "Data")
-  output_dir  <- file.path(project_dir, "Output")
-  analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
-  
-  
-  library(dplyr)  # all libraries should be placed in the first chunk and well commented
+output_dir  <- file.path(project_dir, "Output")
+analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
   
 # loading in the datatset  
-Canc_data <- readRDS(analysis_path) #Canc_data: data from MIDUS cancer subproject
-  
-  # Setting variables for data table
-  age <- Canc_data$age 
-  sex <- Canc_data$sex 
-  edu <- Canc_data$education 
-  income <- Canc_data$income 
-  race_ethn <- Canc_data$race_eth 
-  mar_stat <- Canc_data$marital
-  bmi <- Canc_data$bmi
-  grimage2 <- Canc_data$grimage2_STD
-  dunedinpace <- Canc_data$dunedinpace_STD
-  num_chron <- Canc_data$num_chron
-  smoking <- Canc_data$smoking
-  alcohol <- Canc_data$alcohol
-  famcancer <- Canc_data$famcancer
-  cancerrisk <- Canc_data$cancerrisk
-  self_efficacy <- Canc_data$efficacy
-  
-  
-  # Create dataframe based on given variables
-  df1 <- data.frame(age, race_ethn, sex, mar_stat, edu, income, bmi, grimage2, dunedinpace, num_chron, smoking, alcohol, famcancer, cancerrisk, self_efficacy)
+midus_data <- readRDS(analysis_path) #midus_data: data from MIDUS cancer subproject
   
 # Adding descriptive labels to data frame >> you did not need to do this, as you are subsetting the dataset just to create labels, yet subseqent anlysis will require some of the standardized variables not included in this subset. One way to add labels is using the label function in tbl_summary. What you did here creates spaces in Variable names and variable names should not have spaces, so use label function within tbl_summary
-  
-  library(labelled)
-  var_label(df1$age) <- "Age"
-  var_label(df1$sex) <- "Sex"
-  var_label(df1$mar_stat) <- "Marital Status"
-  var_label(df1$edu) <- "Education"
-  var_label(df1$income) <- "Income"
-  var_label(df1$bmi) <- "BMI"
-  var_label(df1$race_ethn) <- "Race and Ethnicity"
-  var_label(df1$grimage2) <- "GrimAge2"
-  var_label(df1$dunedinpace) <- "DunedinPACE"
-  var_label(df1$num_chron) <- "Number of Chronic Conditions"
-  var_label(df1$smoking) <- "Smoking Status"
-  var_label(df1$alcohol) <- "Alcohol Consumption"
-  var_label(df1$famcancer) <- "Family Cancer History"
-  var_label(df1$self_efficacy) <- "Self Efficacy"
-  var_label(df1$cancerrisk) <- "Perceived Cancer Risk"
-  colnames(df1) <- Hmisc::label(df1) # Assigning new labels to data frame
-  glimpse(df1) 
 
 ```
 
@@ -102,74 +59,60 @@ Create ‘Table 1' univariate statistics on the study population
 
 ```{r}
 # Generate a basic summary table
-library(gtsummary)
-library(tidyverse)
 theme_gtsummary_journal(journal = "jama")
 
-table1 <-
-  df1 %>% 
-  select(-`Race and Ethnicity`) %>% # REMOVING race&ethn to make merging (table 3) easier >> Dont't remove it as you you will need overall descriptive statistics in the slides, it's only removed for the next two tables
+
+table1 <- midus_data %>%
+  # Selecting for variables that will displayed in table
+   select(age, sex, race_eth, marital, education,
+         smoking, alcohol, income, famcancer, num_chron, bmi,
+         cancerrisk_STD, efficacy_STD, dunedinpace_STD, grimage2_STD
+    ) %>%
   tbl_summary( 
-    type = list(c(Sex, `Marital Status`, Education, `Smoking Status`, 
-                `Alcohol Consumption`, `Family Cancer History`) ~ "categorical",
-                c(Age, Income, BMI, GrimAge2, 
-                DunedinPACE, `Number of Chronic Conditions`,
-                `Perceived Cancer Risk`, `Self Efficacy`) ~ "continuous"),
+    # Assigning proper labels to variable names
+    label = list(
+      age ~ "Age",
+      sex ~ "Sex",
+      race_eth ~ "Race and Ethnicity",
+      marital ~ "Marital Status",
+      education ~ "Education",
+      smoking ~ "Smoking Status",
+      alcohol ~ "Alcohol Consumption",
+      income ~ "Income ($)",
+      famcancer ~ "Family History of Cancer",
+      num_chron ~ "Number of Chronic Conditions",
+      bmi ~ "Body Mass Index (kg/m^2)",
+      cancerrisk_STD ~ "Perceived Cancer Risk",
+      efficacy_STD ~ "Self Efficacy",
+      dunedinpace_STD ~ "DunedinPACE",
+      grimage2_STD ~ "GrimAge2"
+      ),
+    # Assigning variable type (categorical or continuous)
+    type = list(all_of(c("sex", "marital", "education", "smoking", 
+                "alcohol", "famcancer", "race_eth")) ~ "categorical",
+                all_of(c("age", "income", "bmi", "grimage2_STD", 
+                "dunedinpace_STD", "num_chron",
+                "cancerrisk_STD", "efficacy_STD")) ~ "continuous"),
     statistic = 
+      # Specifying displayed data depending on variable type
       list( 
-        all_continuous() ~ c("{mean} ({sd})"),
+        all_continuous() ~ "{mean} ({sd})",
         all_categorical() ~ "{n} ({p}%)" 
         ), 
-     missing = "no",
-            ) %>%
+     missing = "ifany"
+            )
+  
+  table1 <- table1 %>%
   modify_caption("**Table I. Univariate Demographic Characteristics of MIDUS Participants**") 
 
   table1
 
 ```
 
-
 ```{r}
 # Load packages
 library(tidyverse)
 library(gtsummary)
-
-# Use JAMA table style
-theme_gtsummary_journal(journal = "jama")  # this needs to be done once
-
-# Table 1: Overall descriptive statistics
-# Do NOT remove Race and Ethnicity here.
-# We need it for the overall descriptive table used in slides/reports.
-# Race and Ethnicity should only be removed later for tables where it is the grouping variable.
-
-table1 <- df1 %>%
-  tbl_summary(
-    include = c(`Race and Ethnicity`, Sex, `Marital Status`, Education, `Smoking Status`, `Alcohol Consumption`, `Family Cancer History`, Age, Income, BMI, GrimAge2, DunedinPACE, `Number of Chronic Conditions`, `Perceived Cancer Risk`, `Self Efficacy`),
-    type = list(c(`Race and Ethnicity`, Sex, `Marital Status`, Education, `Smoking Status`, `Alcohol Consumption`, `Family Cancer History`) ~ "categorical",
-                c(Age, Income, BMI, GrimAge2, DunedinPACE, `Number of Chronic Conditions`, `Perceived Cancer Risk`, `Self Efficacy`) ~ "continuous"),
-    statistic = list(all_continuous() ~ "{mean} ({sd})",
-                     all_categorical() ~ "{n} ({p}%)"),
-    digits = list(all_continuous() ~ 2,
-                  all_categorical() ~ c(0, 1)),
-    missing = "no"  ## here data has missing values so you need t
-  ) %>%
-  modify_caption("**Table 1. Overall Descriptive Characteristics of MIDUS Participants**") %>%
-  modify_header(label ~ "**Characteristic**") %>%
-  bold_labels()
-
-table1
-```
-
-
-see your code above nicely formatted by CHATGPT
-
-```{r}
-# Load packages
-library(tidyverse)
-library(gtsummary)
-
-# Use JAMA table style
-theme_gtsummary_journal(journal = "jama")
 
 # Table 1: Overall descriptive statistics
 # Do not remove Race and Ethnicity here.
@@ -422,31 +365,7 @@ Kindy update your RMD and be sure to finish the rest of the tasks assigned yeste
 Happy coding!
 
 ```{r}
-  age <- Canc_data$age 
-  sex <- Canc_data$sex 
-  edu <- Canc_data$education 
-  income <- Canc_data$income 
-  race_ethn <- Canc_data$race_eth 
-  mar_stat <- Canc_data$marital
-  bmi <- Canc_data$bmi
-  grimage2 <- Canc_data$grimage2_STD
-  dunedinpace <- Canc_data$dunedinpace_STD
-  num_chron <- Canc_data$num_chron
-  smoking <- Canc_data$smoking
-  alcohol <- Canc_data$alcohol
-  famcancer <- Canc_data$famcancer
-  cancerrisk <- Canc_data$cancerrisk
-  self_efficacy <- Canc_data$efficacy
-  
-library(gtsummary)
-# Merging both tables above
-theme_gtsummary_journal(journal = "jama")
-combined_table <- tbl_merge(
-  tbls = list(table2, table1),
-  tab_spanner = FALSE
-)
-
-combined_table
+# FIXED TABLE 3 GOES HERE
 ```
 
 # Export as word document
@@ -466,6 +385,52 @@ combined_table
 
 ```
 
+## Ria's correlation table
+```{r}
+# Selecting all numerical data
+  midus_corr <- midus_data %>% 
+                select("income", "num_chron", "efficacy_STD",
+                      "grimage2_STD", "dunedinpace_STD",
+                      "cancerrisk_STD", "age", "bmi")
+
+# Converting midus_corr to a matrix
+  midus_matrix <- as.matrix(midus_corr)
+
+# Calculating p-values and Pearson's Correlation Coefficient
+  matrix <- Hmisc::rcorr(midus_matrix)
+  
+# Extract p-values and coefficients
+  p <- matrix$P #p-values
+  coeff <- matrix$r #correlation coefficients
+  
+# Adding starts to indicate significance in matrix
+significance <- matrix("", nrow = nrow(p), ncol = ncol(p))
+significance[p < 0.05]  <- "*"
+significance[p < 0.01]  <- "**"
+significance[p < 0.001] <- "***"
+diag(significance) <- "" # Ensuring diagonal values have are empty
+
+# Rounding correlation coefficients
+coeff_rounded <- format(round(coeff, 3), nsmall = 3)
+
+# Combining newly rounded values with stars
+r_and_sig <- matrix(paste0(coeff_rounded, significance), ncol = ncol(coeff))
+rownames(r_and_sig) <- rownames(coeff)
+colnames(r_and_sig) <- colnames(coeff)
+
+# Making copy of updated matrix (with starred formatting & rounding)
+lower_values <- r_and_sig
+
+# Replace the upper triangle with blank spaces
+lower_values[upper.tri(lower_values, diag = FALSE)] <- ""
+
+# View the final result
+print(as.data.frame(lower_values))
+
+```
+
+
+
 ## Ria's Imputation Code
 # Getting started
 ```{r}
@@ -483,9 +448,9 @@ data_dir  <- file.path(project_dir, "Data")
 output_dir  <- file.path(project_dir, "Output")
 analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
 library(dplyr)
-canc_data <- readRDS(analysis_path) #Canc_data: data from MIDUS cancer subproject
-head(canc_data)
-dim(canc_data)
+midus_data <- readRDS(analysis_path) #Canc_data: data from MIDUS cancer subproject
+head(midus_data)
+dim(midus_data)
 ```
 
 
@@ -494,91 +459,110 @@ dim(canc_data)
 # Compiling relevant confounders in vector
 # i.e. subsetting the data to include the two standardized outcomes, 
 # the standardized exposure, the moderator and the 11 covariates
-canc_vars <- canc_data[ , c("grimage2_STD", "dunedinpace_STD", "cancerrisk_STD",
-                 "race_eth", "age", "sex", "education", "income",
-                 "smoking", "bmi", "famcancer")]
+midus_vars <- midus_data %>% 
+              select("income", "num_chron", "famcancer", "efficacy_STD",
+                     "marital", "education", "grimage2_STD", "dunedinpace_STD",
+                     "cancerrisk_STD", "race_eth", "age", "sex",
+                     "smoking", "alcohol", "bmi") %>%
+  # Categorical variables should be coded as factors in order to invoke polyreg
+  mutate(
+      race_eth = factor(race_eth),
+      alcohol = factor(alcohol),
+      sex = factor(sex),
+      education = factor(education, ordered = TRUE),
+      smoking = factor(smoking),
+      marital = factor(marital),
+      famcancer = factor(famcancer)
+    )
+              
 
-confounders <- c("age", "sex", "education", "income",
-  "smoking", "bmi", "famcancer")
 ```
 
 # Summarizing missing data
 ```{r}
-# Counting number of NA
-md.pattern(canc_data) 
+# Summarizing missing data
+md.pattern(midus_data) # Counting number of NA
 # Pattern summary: 1087 rows of 1156 that are complete. 
 
-# Determining four missing patterns
-md.pairs(canc_data)
+md.pairs(midus_data) # Determining four missing patterns 
 # Looking at mr / rm values helps understand which values have overlapping data
 # to make them eligible for calculating imputations. 
 
-# Plotting missingness data
-library(VIM)
-marginplot(canc_data[, c("grimage2_STD", "income")], col = mdc(1:2), cex = 1.2,
-            cex.lab = 1.2, cex.numbers = 1.3, pch = 19)
-# In bottom margin, blue box plot represents distribution 
-# of the GrimAge2 values represented in the center. The red boxplot at the 
-# bottom represents distribution of GrimAge2 values with missing Income points.
-
-# Function to summarize missingness
+# Missing data summary
 missing_summary <- function(data, vars) {
   data %>%
     summarise(
       across(
-        all_of(vars),
-        ~ mean(is.na(.x)) * 100
+        all_of(vars), #across all the given vars
+        ~ mean(is.na(.x)) * 100 # percentage of variables w/ missing values
       )
-    ) %>%
+    ) %>% #create a data set w/ names - variable names, values - percent missing
     pivot_longer(
       cols = everything(),
       names_to = "variable",
       values_to = "percent_missing"
     )
 }
-
-# 3. Check missingness in the original data
-############################################################
-missing_summary(canc_vars, confounders)
+# missing_summary 
+missing_summary(midus_data, names(midus_vars))
 
 ```
 
 # Creating a predictor matrix
 ```{r}
+# Creating variable to store matrix
+matrix_vec <- make.predictorMatrix(midus_vars)
+
 # Generating predictor matrix
-quickpred(canc_vars)
+pred_matrix <- mice(midus_vars, 
+                    m = 20, 
+                    maxit = 10, 
+                    predictorMatrix = matrix_vec)
+
+# Extracting an imputation to print predictor matrix
+print_matrix <- pred_matrix$predictorMatrix
+
+print_matrix
 ```
 
 # Adjusting methods
 ```{r}
 # Creating a methods object
-canc_methods <- make.method(canc_vars[confounders]) 
-canc_methods
+midus_methods <- make.method(midus_vars) 
+midus_methods # Looking to check method types for categorical vars
 
 # Assigning new methods to categorical variables
-canc_methods["education"] <- "polyreg"
-canc_methods["famcancer"] <- "logreg"
+midus_methods["education"] <- "polyreg" #polyreg used for categorical values 
+# with 2+ categories
+midus_methods["famcancer"] <- "logreg" #logreg for nominal categorical values
+midus_methods["marital"] <- "polyreg"
+midus_methods # Checking to ensure variables are updated
 ```
 
 # Conducting the imputation using mice
 ```{r}
-# Separate the variables we want to impute from the variables we want to keep.
-# Here, only the confounders are sent to mice() - so that outcomes are not
-# used as predictors.
-to_imp <- canc_vars %>% #this is known as data wrangling: 
-   select(all_of(confounders))
-
-keep <- canc_vars %>%
-   select(-all_of(confounders))
-
 
 imp <- mice(
-  to_imp, # data: what we want to impute
+  midus_vars, # data: what we want to impute
   m = 20, # number of imputations to perform
   seed = 0864,
   printFlag = FALSE,
-  method = canc_methods
+  method = midus_methods
 )
 
+```
+
+
+```{r}
+# Extract the first completed imputed dataset
+df_mice_completed <- complete(imp, action = 1)
+df_mice_completed
+
+# Combine the non-imputed variables with the imputed confounders
+df_mice_imputed <- keep %>%
+  bind_cols(df_mice_completed) #binding
+
+
+missing_summary(df_mice_imputed, names(df_mice_imputed))
 ```
 
