@@ -10,11 +10,11 @@ output:
 ```{r}
 #loading data (MIDUS Study)
 getwd()
-MIDUS_data <-readRDS("~/PQAR 2026/Research Project/midus_cancer_aging_analysis_dataset.rds")
-View(MIDUS_data)
-dim(MIDUS_data)
+midus_data <-readRDS("~/PQAR 2026/Research Project/midus_cancer_aging_analysis_dataset.rds")
+View(midus_data)
+dim(midus_data)
 
-colnames(MIDUS_data)
+colnames(midus_data)
 
 #Install and load packages: tidyverse, gtsummary, flextable, broom, officer, mice, corrr, tibble, misty
 library(tidyverse)
@@ -26,12 +26,15 @@ library(mice)
 library(corrr)
 library(tibble)
 library(misty)
+library(Hmisc) #corr
+
+
 
 #package used for Latex (knitting to PDF for Mac)
 library(tinytex)
 
 #data from each column (variable)
-univariate_stats <- MIDUS_data %>% select(grimage2:efficacy_STD)
+univariate_stats <- midus_data %>% select(grimage2:efficacy_STD)
 #adds label of what summary value is produced (dependent on data type)
 uni_labs <- list(
   grimage2        ~ "GrimAge2 (Epigenetic Age), mean (SD)",
@@ -74,32 +77,89 @@ univariate_stats_table
 univariate_stats_table %>%
   as_gt() %>%
   gt::gtsave("univariate_stats_table.docx")
-dim(MIDUS_data)
+dim(midus_data)
+
+# - - - - - - - - - - - - - - - CORRELATION MATRIX - - - - - - -
 
 #ADD
 #include p-values (add.p)
 #function add overall within table 
 
-
 #Table 4: Zero-Order Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with #emphasis on outcomes and exposure
-
-library(dplyr)
-library(corrr)
-library(flextable)
-#select variables of interest
-vars <- MIDUS_data %>%
+cor_vars <- midus_data %>%
   select(grimage2, dunedinpace, age, num_chron, cancerrisk_STD, efficacy)
 
-Correlation_Matrix <- vars %>%
-  correlate(method = "pearson", use = "pairwise.complete.obs") %>%
-  shave()
+#Convert to a matrix
+vars_matrix <- as.matrix(cor_vars)
 
-# Rename all columns except term to numbers
-names(Correlation_Matrix)[-1] <- as.character(1:6)
+#Correlation matrix using Hmisc
+correlation_results <- Hmisc::rcorr(vars_matrix, type=c("pearson"))
+#extract correlation matrix
+r_matrix <- correlation_results$p
+#extract p-values
+p_matrix <- correlation_results$P
 
-print(Correlation_Matrix, digits = 3)
+#adding starts for p-values and keep lower triagnle
+r_formatted <- format(round(r_matrix, 3), nsmall = 3) #issue
+stars <- ifelse(p_matrix <0.001, "***",
+                ifelse(p_matrix < 0.01, "**",
+                       ifelse(p_matrix <0.05, "*", "")))
+#combined
+final_cor_matrix <- matrix(paste0(r_formatted, stars), nrow = nrow(r_matrix))
+rownames(final_cor_matrix) <- rownames(r_matrix)
+colnames(final_cor_matrix) <- colnames(r_matrix)
 
-#formatting changes
+#remove self-correlations
+diag(final_cor_matrix) <- "-"
+
+#only keep lower triangle
+final_cor_matrix[upper.tri(final_cor_matrix)] <- ""
+
+#convert to df and format row names as a separate column
+final_df <- as.data.frame(final_cor_matrix)
+final_df <- tibble::rownames_to_column(final_df, var = "Variable")
+
+#Professional variable labels
+#vector mapping old names to new labels
+clean_labels <- c(
+  "grimage2"        = "GrimAge2",
+  "dunedinpace"     = "DunedinPACE",
+  "age"             = "Age",
+  "num_chron"       = "Number of chronic conditions",
+  "cancerrisk_STD"  = "Perceived cancer risk z-score",
+  "efficacy"        = "Self-efficacy"
+)
+
+#rename in final df
+final_df$Variable <- clean_labels[final_df$Variable]
+
+#rename column headers (matching indices 2 to 7)
+colnames(final_df)[2:ncol(final_df)] <- clean_labels[colnames(final_df)[2:ncol(final_df)]]
+
+#formatting (flextable)
+ft <- flextable(final_df) %>%
+  theme_booktabs() %>% #APA
+  bold(part = "header") %>%
+  autofit() %>%
+  # Add a table title
+  add_header_lines("1.1. Table 3. Zero-order correlations among epigenetic aging measures, perceived cancer risk, age, self-efficacy, and chronic conditions.") %>%
+  #footer with stars info
+  add_footer_lines("* p < 0.05, ** p < 0.01, *** p < 0.001") %>%
+  font(fontname = "Arial", part = "all")
+
+ft
+
+#export
+#save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
+
+
+
+      
+      
+      
+      
+
+#- - - - - - OLD
 Correlation_Matrix_fmt <- Correlation_Matrix %>%
   mutate(across(where(is.numeric), ~ ifelse(is.na(.), "", formatC(., format = "f", digits = 3))))
 
@@ -107,69 +167,11 @@ flextable(Correlation_Matrix_fmt) %>%
   autofit() %>%
   save_as_docx(path = "Table_4_Correlation_Matrix.docx")
 
-# - - - - - - - - - - -METHOD 1- - - -- - - - - - 
-
-
-
-# - - - - - - - - - - -OLD METHOD- - - -- - - - - - 
-library(corrr)
-library(dplyr)
-Correlation_Matrix <- vars %>%
-  correlate(method = "pearson", use = "pairwise.complete.obs") %>%
-  shave()
-
-# Only rename the columns, leave term (row names) alone
-var_names <- c("age", "grimage2", "dunedinpace", "num_chron", "cancerrisk", "efficacy")
-num_labels <- as.character(1:6)
-
-Correlation_Matrix <- Correlation_Matrix %>%
-  rename_with(~ num_labels, all_of(var_names))  # rename columns to numbers only
-
-print(Correlation_Matrix, digits = 1)
-
-#formatting changes
-Correlation_Matrix_fmt <- Correlation_Matrix %>%
-  mutate(across(where(is.numeric), ~ ifelse(is.na(.), "", formatC(., format = "f", digits = 3))))
-
-flextable(Correlation_Matrix_fmt) %>%
-  autofit() %>%
-  save_as_docx(path = "Table_4_Correlation_Matrix.docx")
+# - - - - - - - - - - -NEXT- - - -- - - - - - 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-# - - - - - - - - -- 
-vars <- MIDUS_data %>%
-  select(age, grimage2, dunedinpace, num_chron, cancerrisk, efficacy) 
-
-
-
-Correlation_Matrix <- Correlation_Matrix %>%
-  mutate(term = num_labels) %>%                        # rename rows
-  rename_with(~ num_labels, all_of(var_names))  
-
-# Compute Pearson correlation matrix
-Correlation_Matrix <- vars %>%
-  correlate(method = "pearson", use = "pairwise.complete.obs") %>%
-  shave()   # keeps lower triangle (upper becomes NA), mirrors tri = "lower"
-
-# Print rounded to 1 decimal place
-print(Correlation_Matrix, digits = 1)
-
-#save as word
-flextable(Correlation_Matrix) %>% 
-  autofit() %>%  #formatting
-  save_as_docx(path = "Table_4_Correlation_Matrix.docx")
 
 
 ```
