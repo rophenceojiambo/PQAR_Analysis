@@ -255,43 +255,99 @@ table3 %>%
 
 ```
 
+Table 4: correlation matrix
 
-#Table 4: Correlation Table
 ```{r}
-library(dplyr)
-library(corrr)
-library(flextable)
-#select variables of interest
-vars <- midus_data %>%
+#Table 4: Zero-Order Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with #emphasis on outcomes and exposure
+cor_vars <- midus_data %>%
   select(grimage2, dunedinpace, age, num_chron, cancerrisk_STD, efficacy)
 
-Correlation_Matrix <- vars %>%
-  correlate(method = "pearson", use = "pairwise.complete.obs") %>%
-  shave()
+#Convert to a matrix
+vars_matrix <- as.matrix(cor_vars)
 
-# Rename all columns except term to numbers
-names(Correlation_Matrix)[-1] <- as.character(1:6)
+#Correlation matrix using Hmisc
+correlation_results <- Hmisc::rcorr(vars_matrix, type=c("pearson"))
+#extract correlation matrix
+r_matrix <- correlation_results$r
+#extract p-values
+p_matrix <- correlation_results$P
 
-print(Correlation_Matrix, digits = 3)
+#adding starts for p-values and keep lower triagnle
+r_formatted <- format(round(r_matrix, 3), nsmall = 3) #issue
+stars <- ifelse(p_matrix <0.001, "***",
+                ifelse(p_matrix < 0.01, "**",
+                       ifelse(p_matrix <0.05, "*", "")))
+#combined
+final_cor_matrix <- matrix(paste0(r_formatted, stars), nrow = nrow(r_matrix))
+rownames(final_cor_matrix) <- rownames(r_matrix)
+colnames(final_cor_matrix) <- colnames(r_matrix)
 
-#formatting changes
-Correlation_Matrix_fmt <- Correlation_Matrix %>%
-  mutate(across(where(is.numeric), ~ ifelse(is.na(.), "", formatC(., format = "f", digits = 3))))
+#remove self-correlations
+diag(final_cor_matrix) <- ""
 
-flextable(Correlation_Matrix_fmt) %>%
+#only keep lower triangle
+final_cor_matrix[upper.tri(final_cor_matrix)] <- ""
+
+#convert to df and format row names as a separate column
+final_df <- as.data.frame(final_cor_matrix)
+final_df <- tibble::rownames_to_column(final_df, var = "Variable")
+
+#Professional variable labels
+#vector mapping old names to new labels
+clean_labels <- c(
+  "grimage2"        = "GrimAge2",
+  "dunedinpace"     = "DunedinPACE",
+  "age"             = "Age",
+  "num_chron"       = "Number of chronic conditions",
+  "cancerrisk_STD"  = "Perceived cancer risk z-score",
+  "efficacy"        = "Self-efficacy"
+)
+
+#rename in final df
+final_df$Variable <- clean_labels[final_df$Variable]
+#add numbers to row names
+final_df$Variable <- paste0(1:nrow(final_df), ". ", final_df$Variable) 
+#change column headers to numbers (corresponding with row numbering)
+colnames(final_df)[2:ncol(final_df)] <- 1:(ncol(final_df) - 1)
+
+
+#formatting (flextable)
+ft <- flextable(final_df) %>%
+  #set header labels
+  set_header_labels(
+    Variable = "Variable",
+    grimage2 = "1",
+    dunedinpace = "2",
+    age = "3",
+    num_chron = "4",
+    cancerrisk_STD = "5",
+    efficacy = "6") %>%
+  theme_booktabs() %>% #APA
+  bold(part = "header") %>%
   autofit() %>%
-  save_as_docx(path = "Output/Table_4_Correlation_Matrix.docx")
+  fit_to_width(max_width = 6.5, unit = "in") %>%
+  align(j = 1, align = "left", part = "all") %>% 
+  align(j = 2:ncol(final_df), align = "center", part = "all") %>%
+  # Add a table title
+  add_header_lines("1.1. Table 3. Zero-order correlations among epigenetic aging measures, perceived cancer risk, age, self-efficacy, and chronic conditions.") %>%
+  #footer with stars info
+  add_footer_lines("* p < 0.05, ** p < 0.01, *** p < 0.001") %>%
+  font(fontname = "Arial", part = "all")
+
+ft
+
+#export
+save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
 ```
 
 ```{r}
-
 #Multiple imputation 
-
-# Loading packages
+#loading packages 
 library(tidyverse)    # Data wrangling and visualization
 library(mice)         # Multiple imputation
 library(missRanger)   # Random forest imputation
 library(VIM)
+library(dplyr)
 
 # Set seed for reproducibility
 set.seed(0864)
@@ -300,26 +356,40 @@ set.seed(0864)
 data_dir  <- file.path(project_dir, "Data")
 output_dir  <- file.path(project_dir, "Output")
 analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
-library(dplyr)
+midus_data <- readRDS(analysis_path)
 
-# Compiling relevant confounders in vector
-# i.e. subsetting the data to include the two standardized outcomes, 
+
+# Subsetting the data to include the two standardized outcomes, 
 # the standardized exposure, the moderator and the 11 covariates
-midus_vars <- midus_data[ , c("grimage2_STD", "dunedinpace_STD", "cancerrisk_STD",
-                 "race_eth", "age", "sex", "education", "income",
-                 "smoking", "bmi", "marital", "famcancer")]
+#15 vars total 
+midus_vars <- midus_data %>% 
+              select("income", "num_chron", "famcancer", "efficacy_STD",
+                     "marital", "education", "grimage2_STD", "dunedinpace_STD",
+                     "cancerrisk_STD", "race_eth", "age", "sex",
+                     "smoking", "alcohol", "bmi") %>%
+  # Categorical variables should be coded as factors in order to invoke polyreg
+  mutate(
+      race_eth = factor(race_eth),
+      alcohol = factor(alcohol),
+      sex = factor(sex),
+      education = factor(education, ordered = TRUE),
+      smoking = factor(smoking),
+      marital = factor(marital),
+      famcancer = factor(famcancer)
+    )
+         
 
-confounders <- confounders <- c("age", "sex", "education", "income",
-  "smoking", "bmi", "famcancer", "marital")
+# Create a clean character vector tracking all variables in our target analysis subset
+analysis_variables <- names(midus_vars)
 
-# Summarizing missing data
 md.pattern(midus_data) # Counting number of NA
 # Pattern summary: 1087 rows of 1156 that are complete. 
 
-md.pairs(midus_data) # Determining four missing patterns
+md.pairs(midus_data) # Determining four missing patterns 
 # Looking at mr / rm values helps understand which values have overlapping data
 # to make them eligible for calculating imputations. 
 
+#missing summary function 
 missing_summary <- function(data, vars) {
   data %>%
     summarise(
@@ -332,38 +402,29 @@ missing_summary <- function(data, vars) {
       cols = everything(),
       names_to = "variable",
       values_to = "percent_missing"
-    )
+    ) %>%
+  arrange(desc(percent_missing)) #arrange output in descending over 
 }
-# missing_summary 
 
-missing_summary(midus_data, confounders)
 
-# Generating predictor matrix
-quickpred(midus_vars)
+missing_summary(midus_data, analysis_variables)
+
+#predictor matrix 
+pred <- mice(midus_vars, maxit = 0)$predictorMatrix 
 
 # Creating a methods object
-midus_methods <- make.method(midus_vars[confounders]) 
-midus_methods
+midus_methods <- make.method(midus_vars) 
+midus_methods # Looking to check method types for categorical vars
 
 # Assigning new methods to categorical variables
 midus_methods["education"] <- "polyreg"
-midus_methods["famcancer"] <- "logreg"
+#polyreg used for categorical values with 2+ categories
+midus_methods["famcancer"] <- "logreg" #logreg for nominal categorical values
 midus_methods["marital"] <- "polyreg"
-
-# Separate the variables we want to impute from the variables we want to keep.
-# Here, only the confounders are sent to mice().
-
-to_imp <- midus_data%>% #data cleaning w/ pipe operator 
-  select(all_of(confounders))
-to_imp #selects the missing values 
-
-keep <- midus_data %>%
-  select(-all_of(confounders)) #data w/out cofounders
-keep 
-
+midus_methods # Checking to ensure variables are updated
 
 imp <- mice(
-  to_imp, # data: what we want to impute
+  midus_vars, # data: what we want to impute
   m = 20, # number of imputations to perform
   seed = 0864,
   printFlag = FALSE,
@@ -374,29 +435,9 @@ imp <- mice(
 df_mice_completed <- complete(imp, action = 1)
 df_mice_completed
 
-# Combine the non-imputed variables with the imputed confounders
-df_mice_imputed <- keep %>%
-  bind_cols(df_mice_completed) #binding
 
-
-missing_summary(df_mice_imputed, confounders)
-
-#View(df_mice_imputed) this is our data frame 
-#confirms no missing values - all 0 
-
-############################################################
-# 8. Optional: compare original, missing, and imputed missingness
-############################################################
-
-#missing_compare <- bind_rows(
-#  missing_summary(midus_data, confounders) %>%
-#    mutate(dataset = "Original midus data"),
-  
-#  missing_summary(df_mice_imputed, confounders) %>%
-#    mutate(dataset = "Midus after mice imputation"))
-
-#missing_compare %>%
-#  select(dataset, variable, percent_missing)
+# Re-run missing summary on the complete dataset to verify all missingness dropped to 0%
+missing_summary(df_mice_completed, analysis_variables)
 
 ```
 
