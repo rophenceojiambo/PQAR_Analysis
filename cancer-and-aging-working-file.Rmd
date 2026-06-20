@@ -37,6 +37,8 @@ library(readr)
 library(tidyverse)
 library(labelled)
 library(Hmisc)
+library(missRanger)   # Random forest imputation
+library(VIM)
 ```
 
 
@@ -343,11 +345,6 @@ save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
 ```{r}
 #Multiple imputation 
 #loading packages 
-library(tidyverse)    # Data wrangling and visualization
-library(mice)         # Multiple imputation
-library(missRanger)   # Random forest imputation
-library(VIM)
-library(dplyr)
 
 # Set seed for reproducibility
 set.seed(0864)
