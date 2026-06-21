@@ -189,6 +189,30 @@ flextable(Correlation_Matrix_fmt) %>%
 
 
 ```
-```{r multiple imputation}
+
+
+```{r regression}
+m1_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital,
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
+m1_nonh_grim
+
+m2_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + education + income,
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
+
+m3_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + num_chron + famcancer,
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
+m4_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + efficacy_STD,
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
+m5_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + smoking + alcohol,
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
+#dunedin
+m1_nonh_dune <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital,
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
 
 ```
