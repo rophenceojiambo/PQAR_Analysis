@@ -430,18 +430,22 @@ library(tidyverse)    # Data wrangling and visualization
 library(mice)         # Multiple imputation
 library(missRanger)   # Random forest imputation
 library(VIM)
+```
 
+ I commented this out, as you don't need to load the data again (Roph)
+ 
+```{r, eval=FALSE}
 # Set seed for reproducibility
 set.seed(0864)
 
 # Load dataset
-data_dir  <- file.path(project_dir, "Data")
-output_dir  <- file.path(project_dir, "Output")
-analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
-library(dplyr)
-midus_data <- readRDS(analysis_path) #Canc_data: data from MIDUS cancer subproject
-head(midus_data)
-dim(midus_data)
+#data_dir  <- file.path(project_dir, "Data")
+#output_dir  <- file.path(project_dir, "Output")
+#analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
+#library(dplyr)
+#midus_data <- readRDS(analysis_path) #Canc_data: data from MIDUS cancer subproject
+#head(midus_data)
+#dim(midus_data)
 ```
 
 
@@ -504,16 +508,16 @@ missing_summary(midus_data, names(midus_vars))
 # Creating variable to store matrix
 matrix_vec <- make.predictorMatrix(midus_vars)
 
-# Generating predictor matrix
+# Generating predictor matrix, I changed this to maxit = 0, and commented out m=20, as we are not running mice here but creating the predictor matrix (Rophence). You code was still fine even with these mistake
 pred_matrix <- mice(midus_vars, 
-                    m = 20, 
-                    maxit = 10, 
+                   # m = 20, 
+                    maxit = 0, 
                     predictorMatrix = matrix_vec)
 
 # Extracting an imputation to print predictor matrix
 print_matrix <- pred_matrix$predictorMatrix
 
-print_matrix
+#print_matrix
 ```
 
 # Adjusting methods
@@ -523,10 +527,9 @@ midus_methods <- make.method(midus_vars)
 midus_methods # Looking to check method types for categorical vars
 
 # Assigning new methods to categorical variables
-midus_methods["education"] <- "polyreg" #polyreg used for categorical values 
-# with 2+ categories
+midus_methods["education"] <- "polr" # changed this from "polyreg" as education is an ordered categorical variable 
 midus_methods["famcancer"] <- "logreg" #logreg for nominal categorical values
-midus_methods["marital"] <- "polyreg"
+midus_methods["marital"] <- "polyreg" 
 midus_methods # Checking to ensure variables are updated
 ```
 
@@ -535,7 +538,7 @@ midus_methods # Checking to ensure variables are updated
 
 imp <- mice(
   midus_vars, # data: what we want to impute
-  m = 20, # number of imputations to perform
+  m = 10, # number of imputations to perform
   seed = 0864,
   printFlag = FALSE,
   method = midus_methods
@@ -554,6 +557,8 @@ missing_summary(df_mice_completed, names(df_mice_completed))
 ```
 
 ## Ria's regression models
+
+
 ```{r}
 
 # Models for Hispanic participants
@@ -736,3 +741,4 @@ summary(model5_hisp)
 
 ```
 
+#
