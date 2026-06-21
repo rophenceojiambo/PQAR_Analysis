@@ -257,7 +257,7 @@ table3 %>%
 
 ```
 
-Table 4: correlation matrix
+#Table 4: correlation matrix
 
 ```{r}
 #Table 4: Zero-Order Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with #emphasis on outcomes and exposure
@@ -342,6 +342,7 @@ ft
 save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
 ```
 
+#Multiple Imputation
 ```{r}
 # Conducting multiple imputation 
 
