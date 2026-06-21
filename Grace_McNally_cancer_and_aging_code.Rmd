@@ -37,6 +37,8 @@ library(readr)
 library(tidyverse)
 library(labelled)
 library(Hmisc)
+library(modelsummary)
+
 ```
 
 
@@ -351,7 +353,7 @@ set.seed(0864)
 # the standardized exposure, the moderator and the 11 covariates
 #15 vars total 
 midus_vars <- midus_data %>% 
-              select("income", "num_chron", "famcancer", "efficacy_STD",
+              select("income", "num_chron", "famcancer", "efficacy",
                      "marital", "education", "grimage2_STD", "dunedinpace_STD",
                      "cancerrisk_STD", "race_eth", "age", "sex",
                      "smoking", "alcohol", "bmi") %>%
@@ -405,7 +407,7 @@ midus_methods <- make.method(midus_vars)
 midus_methods # Looking to check method types for categorical vars
 
 # Assigning new methods to categorical variables
-midus_methods["education"] <- "polyreg"
+midus_methods["education"] <- "polr"
 #polyreg used for categorical values with 2+ categories
 midus_methods["famcancer"] <- "logreg" #logreg for nominal categorical values
 midus_methods["marital"] <- "polyreg"
@@ -413,7 +415,7 @@ midus_methods # Checking to ensure variables are updated
 
 imp <- mice(
   midus_vars, # data: what we want to impute
-  m = 20, # number of imputations to perform
+  m = 10, # number of imputations to perform
   seed = 0864,
   printFlag = FALSE,
   method = midus_methods
@@ -428,149 +430,43 @@ df_mice_completed
 missing_summary(df_mice_completed, analysis_variables)
 ```
 
-```{r}
-
-#fitting the models for the overall sample 
-# Ensure you are using the dataset that has been imputed and standardized
-# (Assuming df_analysis is your final imputed dataset with standardized variables)
-
-# 1. Define the population groups to analyze
-pop_groups <- c("Overall", "non-Hispanic White")
-
-# 2. Define the two standardized outcomes
-outcomes <- c("grimage2_STD", "dunedinpace_STD")
-
-# 3. Define the sequential adjustment sets as formulas (excluding the outcome)
-# Note: We omit race_eth here; we will dynamically add it back only for the Overall sample.
-model_formulas <- list(
-  Model1 = "cancerrisk_STD + age + sex + marital",
-  Model2 = "cancerrisk_STD + age + sex + marital + education + income",
-  Model3 = "cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer",
-  Model4 = "cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy_STD",
-  Model5 = "cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy_STD + smoking + alcohol + bmi"
-)
-
-# Initialize an empty list to store all 20 model outputs
-all_models_results <- list()
-
-# Loop through each population group
-for (pop in pop_groups) {
-  
-  # Filter data based on the population group
-  if (pop == "Overall") {
-    df_sub <- df_analysis
-  } else if (pop == "non-Hispanic White") {
-    df_sub <- df_analysis %>% filter(race_eth == "non-Hispanic White")
-  }
-  
-  # Loop through each outcome
-  for (out in outcomes) {
-    
-    # Loop through Models 1 to 5
-    for (mod_name in names(model_formulas)) {
-      
-      # Fetch baseline predictors
-      predictors <- model_formulas[[mod_name]]
-      
-      # Rule: Include race_eth as a covariate ONLY in the Overall sample
-      if (pop == "Overall") {
-        predictors <- paste(predictors, "+ race_eth")
-      }
-      
-      # Construct the final dynamic regression formula
-      full_formula <- as.formula(paste(out, "~", predictors))
-      
-      # Fit the linear model
-      fit <- lm(full_formula, data = df_sub)
-      
-      # Create a unique tracking label for the list dictionary
-      label <- paste(pop, out, mod_name, sep = " | ")
-      
-      # Extract clean statistics using broom::tidy()
-      all_models_results[[label]] <- broom::tidy(fit, conf.int = TRUE) %>%
-        filter(term == "cancerrisk_STD") %>% # Isolate the target coefficient
-        mutate(
-          Population = pop,
-          Outcome = out,
-          Model = mod_name
-        )
-    }
-  }
-}
-
-# 4. Bind all 20 targets into one beautiful master table
-final_coefficient_summary <- bind_rows(all_models_results) %>%
-  select(Population, Outcome, Model, estimate, std.error, statistic, p.value, conf.low, conf.high)
-
-# Print the master table out to check your results
-print(final_coefficient_summary, n = 20)
-
-
-
-
-```
+#regression analysis
 
 ```{r}
-# ==========================================
-# REGRESSION MODELS & EXPORT
-# ==========================================
-library(modelsummary)
-library(flextable)
-
+# =========================================
+#Regression analysis 
 # Split into two explicit data frames as requested
 df_overall <- df_mice_completed
 df_white   <- df_mice_completed %>% filter(race_eth == "non-Hispanic White")
-
+df_white
 # --- Outcome: GrimAge2 (Overall) ---
 grim_ov_m1 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + race_eth, data = df_overall)
 grim_ov_m2 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + race_eth, data = df_overall)
 grim_ov_m3 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + race_eth, data = df_overall)
-grim_ov_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy_STD + race_eth, data = df_overall)
-grim_ov_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy_STD + smoking + alcohol + bmi + race_eth, data = df_overall)
+grim_ov_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + race_eth, data = df_overall)
+grim_ov_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi + race_eth, data = df_overall)
 
 # --- Outcome: DunedinPACE (Overall) ---
 pace_ov_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + race_eth, data = df_overall)
 pace_ov_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + race_eth, data = df_overall)
 pace_ov_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + race_eth, data = df_overall)
-pace_ov_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy_STD + race_eth, data = df_overall)
-pace_ov_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy_STD + smoking + alcohol + bmi + race_eth, data = df_overall)
+pace_ov_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + race_eth, data = df_overall)
+pace_ov_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi + race_eth, data = df_overall)
 
 # --- Outcome: GrimAge2 (White Sample) ---
 grim_wh_m1 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital, data = df_white)
 grim_wh_m2 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income, data = df_white)
 grim_wh_m3 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer, data = df_white)
-grim_wh_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy_STD, data = df_white)
-grim_wh_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy_STD + smoking + alcohol + bmi, data = df_white)
+grim_wh_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy, data = df_white)
+grim_wh_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi, data = df_white)
 
 # --- Outcome: DunedinPACE (White Sample) ---
 pace_wh_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital, data = df_white)
 pace_wh_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income, data = df_white)
 pace_wh_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer, data = df_white)
-pace_wh_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy_STD, data = df_white)
-pace_wh_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy_STD + smoking + alcohol + bmi, data = df_white)
+pace_wh_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy, data = df_white)
+pace_wh_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi, data = df_white)
 
-# ==========================================
-# MODEL EXPORT TO WORD
-# ==========================================
+summary(pace_wh_m1)
 
-# Group the 10 Overall Sample Models
-overall_models <- list(
-  "Grim M1" = grim_ov_m1, "Grim M2" = grim_ov_m2, "Grim M3" = grim_ov_m3, "Grim M4" = grim_ov_m4, "Grim M5" = grim_ov_m5,
-  "Pace M1" = pace_ov_m1, "Pace M2" = pace_ov_m2, "Pace M3" = pace_ov_m3, "Pace M4" = pace_ov_m4, "Pace M5" = pace_ov_m5
-)
-
-# Group the 10 non-Hispanic White Sample Models
-white_models <- list(
-  "Grim M1" = grim_wh_m1, "Grim M2" = grim_wh_m2, "Grim M3" = grim_wh_m3, "Grim M4" = grim_wh_m4, "Grim M5" = grim_wh_m5,
-  "Pace M1" = pace_wh_m1, "Pace M2" = pace_wh_m2, "Pace M3" = pace_wh_m3, "Pace M4" = pace_wh_m4, "Pace M5" = pace_wh_m5
-)
-
-# FIXED: Removed the extra "/Output/" from the filename string 
-file_path_combined <- file.path(output_dir, "grace_overall_white_models.docx")
-
-# Save all 20 side-by-side in one mega document
-all_20_models <- c(overall_models, white_models)
-modelsummary(all_20_models, output = file_path_combined, stars = TRUE, title = "Grace: All 20 Regression Models")
-
-all_20_models
 ```
