@@ -403,7 +403,7 @@ midus_methods <- make.method(midus_vars)
 midus_methods # Looking to check method types for categorical vars
 
 # Assigning new methods to categorical variables
-midus_methods["education"] <- "polyreg"
+midus_methods["education"] <- "polr" # changed this from "polyreg" as education is an ordered categorical variable
 #polyreg used for categorical values with 2+ categories
 midus_methods["famcancer"] <- "logreg" #logreg for nominal categorical values
 midus_methods["marital"] <- "polyreg"
@@ -411,7 +411,7 @@ midus_methods # Checking to ensure variables are updated
 
 imp <- mice(
   midus_vars, # data: what we want to impute
-  m = 20, # number of imputations to perform
+  m = 10, # number of imputations to perform
   seed = 0864,
   printFlag = FALSE,
   method = midus_methods
