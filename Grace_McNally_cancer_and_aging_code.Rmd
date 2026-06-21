@@ -119,7 +119,7 @@ table1
 
 table1 %>% 
   as_flex_table() %>%
-  save_as_docx(path = "Output/Table 1 Overall Descriptives.docx")
+  save_as_docx(path = "Output/Grace_Table 1 Overall Descriptives.docx")
 
 ```
 
@@ -171,7 +171,7 @@ table2
 table2 %>% 
   as_flex_table() %>%
   save_as_docx(
-    path = "Output/Table 2 Descriptives by Race and Ethnicity.docx",
+    path = "Output/Grace_Table 2 Descriptives by Race and Ethnicity.docx",
     pr_section = prop_section(
       page_size = page_size(orient = "landscape", width = 11.7, height = 8.3))
       )
@@ -239,7 +239,7 @@ table3 %>%
   as_flex_table() %>%
   set_table_properties(layout = "autofit", width = 1) %>%
   save_as_docx(
-    path = "Output/Table 3 Descriptive Overall and by Race and Ethnicity.docx",
+    path = "Output/Grace_Table 3 Descriptive Overall and by Race and Ethnicity.docx",
     pr_section = prop_section(
       page_size = page_size(orient = "landscape", width = 11.7, height = 8.3))
       )
@@ -319,7 +319,7 @@ ft <- flextable(final_df) %>%
   align(j = 1, align = "left", part = "all") %>% 
   align(j = 2:ncol(final_df), align = "center", part = "all") %>%
   # Add a table title
-  add_header_lines("1.1. Table 3. Zero-order correlations among epigenetic aging measures, perceived cancer risk, age, self-efficacy, and chronic conditions.") %>%
+  add_header_lines("Table 3. Zero-order correlations among epigenetic aging measures, perceived cancer risk, age, self-efficacy, and chronic conditions.") %>%
   #footer with stars info
   add_footer_lines("* p < 0.05, ** p < 0.01, *** p < 0.001") %>%
   font(fontname = "Arial", part = "all")
@@ -327,7 +327,7 @@ ft <- flextable(final_df) %>%
 ft
 
 #export
-save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
+save_as_docx(ft, path = "Output/Grace_Table_4_Correlation_Matrix.docx")
 ```
 
 
@@ -346,13 +346,6 @@ library(dplyr)
 
 # Set seed for reproducibility
 set.seed(0864)
-
-# Load dataset
-data_dir  <- file.path(project_dir, "Data")
-output_dir  <- file.path(project_dir, "Output")
-analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
-midus_data <- readRDS(analysis_path)
-
 
 # Subsetting the data to include the two standardized outcomes, 
 # the standardized exposure, the moderator and the 11 covariates
