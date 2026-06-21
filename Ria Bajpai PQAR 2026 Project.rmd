@@ -549,11 +549,190 @@ imp <- mice(
 df_mice_completed <- complete(imp, action = 1)
 df_mice_completed
 
-# Combine the non-imputed variables with the imputed confounders
-df_mice_imputed <- keep %>%
-  bind_cols(df_mice_completed) #binding
+# Verifying that % missing is now zero
+missing_summary(df_mice_completed, names(df_mice_completed))
+```
+
+## Ria's regression models
+```{r}
+
+# Models for Hispanic participants
+#GrimAge2 Model 1
+# Covariates: Perceived cancer risk + age + sex + marital status
+# Outcome: GrimAge2 Standardized Scores
+
+# Subsetting data as data frames by race/ethnicity
+hispanic_pop <- df_mice_completed[df_mice_completed$race_eth == "Hispanic", ]
+# Calculating regression statistics
+model1_hisp <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital, data = hispanic_pop)
+summary(model1_hisp)
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -0.70987 -0.17619 -0.08119  0.22925  0.83587 
+# 
+# Coefficients:
+#                                    Estimate Std. Error t value Pr(>|t|)    
+# (Intercept)                       -3.986771   0.262499 -15.188   <2e-16 ***
+# cancerrisk_STD                     0.129533   0.072431   1.788   0.0824 .  
+# age                                0.078912   0.004905  16.087   <2e-16 ***
+# sexFemale                         -0.086788   0.118451  -0.733   0.4686    
+# maritalDivorced/Separated/Widowed  0.334796   0.137500   2.435   0.0201 *  
+# maritalNever married               0.146090   0.164090   0.890   0.3794    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 0.3553 on 35 degrees of freedom
+# Multiple R-squared:  0.9093,	Adjusted R-squared:  0.8963 
+# F-statistic: 70.18 on 5 and 35 DF,  p-value: < 2.2e-16
+
+# Creating a plot for model 1
+library(ggeffects)
+ggpredict(model1_hisp, terms = c("age", "sex", "marital")) %>%
+  plot(colors = "bw")
+
+#GrimAge2 Model 2
+# Covariates: Perceived cancer risk + age + sex + race/ethnicity + 
+# marital status + education + income
+# Outcome: GrimAge2 Standardized Scores
+# Calculating regression statistics
+model2_hisp <- lm(grimage2_STD ~ 
+                  cancerrisk_STD + age + sex + marital + education + income, 
+                  data = hispanic_pop)
+summary(model2_hisp)
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -0.68461 -0.19616 -0.01902  0.21238  0.78185 
+# 
+# Coefficients:
+#                                     Estimate Std. Error t value Pr(>|t|)    
+# (Intercept)                       -3.955e+00  3.224e-01 -12.266 1.23e-13 ***
+# cancerrisk_STD                     9.297e-02  7.499e-02   1.240   0.2241    
+# age                                7.929e-02  5.289e-03  14.991 5.06e-16 ***
+# sexFemale                         -1.132e-01  1.189e-01  -0.952   0.3482    
+# maritalDivorced/Separated/Widowed  3.061e-01  1.451e-01   2.110   0.0428 *  
+# maritalNever married               1.921e-01  1.915e-01   1.003   0.3234    
+# education.L                       -1.852e-01  1.023e-01  -1.811   0.0796 .  
+# education.Q                        2.531e-02  1.152e-01   0.220   0.8275    
+# income                            -2.908e-07  9.320e-07  -0.312   0.7571    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 0.3531 on 32 degrees of freedom
+# Multiple R-squared:  0.9181,	Adjusted R-squared:  0.8976 
+# F-statistic: 44.83 on 8 and 32 DF,  p-value: 3.133e-15
 
 
-missing_summary(df_mice_imputed, names(df_mice_imputed))
+#GrimAge2 Model 3
+# Covariates: Perceived cancer risk + age + sex + race/ethnicity + 
+# marital status + education + income 
+# + number of chronic conditions + family history of cancer
+# Outcome: GrimAge2 Standardized Scores
+# Calculating regression statistics
+model3_hisp <- lm(grimage2_STD ~ 
+                  cancerrisk_STD + age + sex + marital + education + income 
+                  + num_chron + famcancer, data = hispanic_pop)
+summary(model3_hisp)
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -0.71593 -0.17367  0.00047  0.19394  0.78110 
+# 
+# Coefficients:
+#                                     Estimate Std. Error t value Pr(>|t|)    
+# (Intercept)                       -4.061e+00  3.408e-01 -11.916 6.65e-13 ***
+# cancerrisk_STD                     8.897e-02  7.689e-02   1.157    0.256    
+# age                                8.168e-02  5.772e-03  14.151 8.17e-15 ***
+# sexFemale                         -1.217e-01  1.205e-01  -1.010    0.320    
+# maritalDivorced/Separated/Widowed  2.517e-01  1.566e-01   1.608    0.118    
+# maritalNever married               1.804e-01  1.982e-01   0.910    0.370    
+# education.L                       -1.672e-01  1.052e-01  -1.590    0.122    
+# education.Q                        1.615e-02  1.202e-01   0.134    0.894    
+# income                            -3.862e-07  9.461e-07  -0.408    0.686    
+# num_chron                          2.276e-02  2.304e-02   0.988    0.331    
+# famcancerYes                      -1.091e-01  1.363e-01  -0.801    0.430    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 0.357 on 30 degrees of freedom
+# Multiple R-squared:  0.9215,	Adjusted R-squared:  0.8953 
+# F-statistic: 35.22 on 10 and 30 DF,  p-value: 7.557e-14
+
+#GrimAge2 Model 4
+# Covariates: Perceived cancer risk + age + sex + race/ethnicity + 
+# marital status + education + income + self efficacy
+# + number of chronic conditions + family history of cancer
+# Outcome: GrimAge2 Standardized Scores
+# Calculating regression statistics
+model4_hisp <- lm(grimage2_STD ~ 
+                  cancerrisk_STD + age + sex + marital + education + income 
+                  + num_chron + famcancer + efficacy_STD, data = hispanic_pop)
+summary(model4_hisp)
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -0.70954 -0.17250 -0.00084  0.19890  0.78793 
+# 
+# Coefficients:
+#                                     Estimate Std. Error t value Pr(>|t|)    
+# (Intercept)                       -4.054e+00  3.536e-01 -11.466 2.72e-12 ***
+# cancerrisk_STD                     8.926e-02  7.826e-02   1.141    0.263    
+# age                                8.159e-02  5.949e-03  13.715 3.31e-14 ***
+# sexFemale                         -1.215e-01  1.225e-01  -0.992    0.330    
+# maritalDivorced/Separated/Widowed  2.502e-01  1.600e-01   1.563    0.129    
+# maritalNever married               1.782e-01  2.029e-01   0.878    0.387    
+# education.L                       -1.681e-01  1.074e-01  -1.566    0.128    
+# education.Q                        1.764e-02  1.233e-01   0.143    0.887    
+# income                            -4.063e-07  9.858e-07  -0.412    0.683    
+# num_chron                          2.285e-02  2.345e-02   0.974    0.338    
+# famcancerYes                      -1.100e-01  1.389e-01  -0.792    0.435    
+# efficacy_STD                      -6.882e-03  7.327e-02  -0.094    0.926    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 0.363 on 29 degrees of freedom
+# Multiple R-squared:  0.9215,	Adjusted R-squared:  0.8918 
+# F-statistic: 30.96 on 11 and 29 DF,  p-value: 4.633e-13
+
+#GrimAge2 Model 5
+# Covariates: Perceived cancer risk + age + sex + race/ethnicity + 
+# marital status + education + income + self efficacy
+# + number of chronic conditions + family history of cancer
+# + smoking + alcohol + BMI
+# Outcome: GrimAge2 Standardized Scores
+# Calculating regression statistics
+model5_hisp <- lm(grimage2_STD ~ 
+                  cancerrisk_STD + age + sex + marital + education + income 
+                  + num_chron + famcancer + efficacy_STD
+                  + smoking + alcohol + bmi, data = hispanic_pop)
+summary(model5_hisp)
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -0.50558 -0.10608 -0.00401  0.12109  0.56897 
+# 
+# Coefficients:
+#                                     Estimate Std. Error t value Pr(>|t|)    
+# (Intercept)                       -4.378e+00  5.812e-01  -7.532 1.19e-07 ***
+# cancerrisk_STD                     1.627e-02  7.642e-02   0.213   0.8333    
+# age                                7.897e-02  5.808e-03  13.597 1.76e-12 ***
+# sexFemale                         -1.789e-02  1.281e-01  -0.140   0.8901    
+# maritalDivorced/Separated/Widowed -3.917e-02  1.829e-01  -0.214   0.8323    
+# maritalNever married               1.385e-01  1.831e-01   0.757   0.4570    
+# education.L                       -5.742e-02  1.023e-01  -0.561   0.5801    
+# education.Q                        6.176e-03  1.187e-01   0.052   0.9590    
+# income                            -7.820e-07  9.024e-07  -0.867   0.3951    
+# num_chron                          3.917e-03  2.212e-02   0.177   0.8610    
+# famcancerYes                      -1.736e-01  1.380e-01  -1.258   0.2209    
+# efficacy_STD                      -2.995e-02  7.563e-02  -0.396   0.6958    
+# smokingPast                        2.368e-01  1.482e-01   1.598   0.1237    
+# smokingCurrent                     7.842e-01  3.190e-01   2.458   0.0219 *  
+# alcohol<1 day a week              -2.972e-02  1.667e-01  -0.178   0.8601    
+# alcohol1-2 days a week            -2.895e-03  1.918e-01  -0.015   0.9881    
+# alcohol3+ days a week              2.625e-01  1.927e-01   1.362   0.1863    
+# bmi                                1.398e-02  1.604e-02   0.871   0.3926    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 0.3127 on 23 degrees of freedom
+# Multiple R-squared:  0.9538,	Adjusted R-squared:  0.9197 
+# F-statistic: 27.95 on 17 and 23 DF,  p-value: 2e-11
+
 ```
 

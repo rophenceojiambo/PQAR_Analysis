@@ -37,6 +37,8 @@ library(readr)
 library(tidyverse)
 library(labelled)
 library(Hmisc)
+library(missRanger)   # Random forest imputation
+library(VIM)
 ```
 
 
@@ -341,23 +343,7 @@ save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
 ```
 
 ```{r}
-#Multiple imputation 
-#loading packages 
-library(tidyverse)    # Data wrangling and visualization
-library(mice)         # Multiple imputation
-library(missRanger)   # Random forest imputation
-library(VIM)
-library(dplyr)
-
-# Set seed for reproducibility
-set.seed(0864)
-
-# Load dataset
-data_dir  <- file.path(project_dir, "Data")
-output_dir  <- file.path(project_dir, "Output")
-analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
-midus_data <- readRDS(analysis_path)
-
+# Conducting multiple imputation 
 
 # Subsetting the data to include the two standardized outcomes, 
 # the standardized exposure, the moderator and the 11 covariates
