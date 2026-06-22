@@ -468,6 +468,7 @@ pace_wh_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + educat
 pace_wh_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi, data = df_white)
 
 summary(pace_wh_m1)
+summary(pace_ov_m1)
 
 # Group models into logical lists
 models_grim_overall <- list("M1" = grim_ov_m1, "M2" = grim_ov_m2, "M3" = grim_ov_m3, "M4" = grim_ov_m4, "M5" = grim_ov_m5)
@@ -513,10 +514,13 @@ models_pace_white   <- list("M1" = pace_wh_m1, "M2" = pace_wh_m2, "M3" = pace_wh
 # Build the document step-by-step
 doc <- add_clean_table_to_word(doc, "Table 1: GrimAge2 Regression Models (Overall Sample)", models_grim_overall)
 doc <- add_clean_table_to_word(doc, "Table 2: DunedinPACE Regression Models (Overall Sample)", models_pace_overall)
-doc <- add_clean_table_to_word(doc, "Table 3: GrimAge2 Regression Models (White Sample)", models_grim_overall)
-doc <- add_clean_table_to_word(doc, "Table 4: DunedinPACE Regression Models (White Sample)", models_pace_overall)
+doc <- add_clean_table_to_word(doc, "Table 3: GrimAge2 Regression Models (White Sample)", models_grim_white)
+doc <- add_clean_table_to_word(doc, "Table 4: DunedinPACE Regression Models (White Sample)", models_pace_white)
  
 output_filepath <- "Output/grace_overall_white_models.docx"
 print(doc, target = output_filepath)
+
+#white population lower coefficient for perceived cancer primage 2 in all models 
+#much lower for dunedinpace, but no p-value association 
  
 ```
