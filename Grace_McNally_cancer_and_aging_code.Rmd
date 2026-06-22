@@ -494,11 +494,14 @@ models_pace_white   <- list("M1" = pace_wh_m1, "M2" = pace_wh_m2, "M3" = pace_wh
     output   = "flextable", 
     stars    = TRUE,                   # Adds standard significance stars (*, **, ***)
     coef_map = variables_to_show,      # Tells R to ONLY display these rows
-    gof_map  = c("nobs", "r.squared")  # Cleans up goodness-of-fit row metrics
+    gof_map  = c("nobs", "r.squared"), # Cleans up goodness-of-fit row metrics
+  
+    # Glue the estimate and the 95% confidence intervals 
+    estimate = "estimate",
+    statistic = "[{conf.low}, {conf.high}]"
   )
   
-  tab %>% autofit()
-  
+ tab %>% autofit() 
   # Append title and table structure to the running word document object
   doc <- doc %>% 
     body_add_par(title, style = "heading 1") %>% 
