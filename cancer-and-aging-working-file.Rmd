@@ -40,6 +40,7 @@ library(Hmisc)
 library(missRanger)   # Random forest imputation
 library(VIM)
 library(naniar)
+theme_gtsummary_journal(journal = "jama")
 ```
 
 
@@ -350,11 +351,18 @@ save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
 # Subsetting the data to include the two standardized outcomes, 
 # the standardized exposure, the moderator and the 11 covariates
 #15 vars total 
+# checking for row containing NA value in grimAge2_STD
+print(is.na(midus_data$grimage2_STD))
+
 midus_vars <- midus_data %>% 
               select("income", "num_chron", "famcancer", "efficacy_STD",
                      "marital", "education", "grimage2_STD", "dunedinpace_STD",
                      "cancerrisk_STD", "race_eth", "age", "sex",
                      "smoking", "alcohol", "bmi") %>%
+  # Removing row with NA value for grimage2_STD
+  filter(
+    !is.na(grimage2_STD)
+  ) %>%
   # Categorical variables should be coded as factors in order to invoke polyreg
   mutate(
       race_eth = factor(race_eth),
@@ -365,6 +373,10 @@ midus_vars <- midus_data %>%
       marital = factor(marital),
       famcancer = factor(famcancer)
     )
+
+
+# confirming NA value has been removed
+print(is.na(midus_vars$grimage2_STD))
 
 # Run Little's MCAR
 mcar_test(midus_vars)

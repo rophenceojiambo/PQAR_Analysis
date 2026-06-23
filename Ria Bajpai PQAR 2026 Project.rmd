@@ -455,11 +455,19 @@ set.seed(0864)
 # Compiling relevant confounders in vector
 # i.e. subsetting the data to include the two standardized outcomes, 
 # the standardized exposure, the moderator and the 11 covariates
+
+# checking for row containing NA value in grimAge2_STD
+print(is.na(midus_data$grimage2_STD))
+
 midus_vars <- midus_data %>% 
               select("income", "num_chron", "famcancer", "efficacy",
                      "marital", "education", "grimage2_STD", "dunedinpace_STD",
                      "cancerrisk_STD", "race_eth", "age", "sex",
                      "smoking", "alcohol", "bmi") %>%
+  # Removing row with NA value for grimage2_STD
+  filter(
+    !is.na(grimage2_STD)
+  ) %>%
   # Categorical variables should be coded as factors in order to invoke polyreg
   mutate(
       race_eth = factor(race_eth),
@@ -472,6 +480,8 @@ midus_vars <- midus_data %>%
     )
               
 
+# confirming NA value has been removed
+print(is.na(midus_vars$grimage2_STD))
 ```
 
 # Summarizing missing data
