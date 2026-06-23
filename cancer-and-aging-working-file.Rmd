@@ -364,7 +364,10 @@ midus_vars <- midus_data %>%
       marital = factor(marital),
       famcancer = factor(famcancer)
     )
-         
+
+# Run Little's MCAR
+library(naniar)
+mcar_test(midus_vars)
 
 # Create a clean character vector tracking all variables in our target analysis subset
 analysis_variables <- names(midus_vars)
