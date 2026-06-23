@@ -39,6 +39,7 @@ library(labelled)
 library(Hmisc)
 library(missRanger)   # Random forest imputation
 library(VIM)
+library(naniar)
 ```
 
 
@@ -366,8 +367,9 @@ midus_vars <- midus_data %>%
     )
 
 # Run Little's MCAR
-library(naniar)
 mcar_test(midus_vars)
+# statistic df  p-value  missing.patterns
+# 212.3461	162	0.004844206	13	
 
 # Create a clean character vector tracking all variables in our target analysis subset
 analysis_variables <- names(midus_vars)
