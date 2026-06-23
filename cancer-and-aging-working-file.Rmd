@@ -44,12 +44,6 @@ theme_gtsummary_journal(journal = "jama")
 ```
 
 
-```{r}
-# theme for tables
-theme_gtsummary_journal(journal = "jama")
-```
-
-
 The main exposure is standardized perceived cancer risk:
 
 ```text
@@ -94,12 +88,14 @@ table1 <- midus_data %>%
       c(race_eth, sex, marital, education, smoking, alcohol, famcancer) ~ "categorical") ,
     statistic = list( 
       all_continuous() ~ "{mean} ({sd})",   # Removed the c() wrapper
-      all_categorical() ~ "{n} ({p}%)" 
+      all_categorical() ~ "{n} ({p})" 
     ),
     missing = "ifany",
     missing_stat = "{N_miss} ({p_miss}%)",  # this adds the frequency and % missing
     missing_text = "Missing", 
-    digits = all_continuous() ~ 1, 
+    digits = list(all_continuous() ~ c(1,1), 
+                  all_categorical() ~ c(0,1)
+    ),
     label = list(
       race_eth ~ "Race/Ethnicity",
       grimage2 ~ "GrimAge2", 
@@ -226,7 +222,7 @@ tbl_summary(by = race_eth,
       marital ~ "Marital status",
       education ~ "Education attainment",
       income ~ "Annual household income",
-      num_chron ~ "Number of chronic Conditions",
+      num_chron ~ "Number of chronic Ccnditions",
       smoking ~ "Smoking status",
       alcohol ~ "Alcohol consumption",
       famcancer ~ "Family cancer history",
@@ -304,7 +300,7 @@ clean_labels <- c(
   "age"             = "Age",
   "num_chron"       = "Number of chronic conditions",
   "cancerrisk_STD"  = "Perceived cancer risk z-score",
-  "efficacy"        = "Self-efficacy"
+  "efficacy"        = "Self-efficacy for Cancer Prevention"
 )
 
 #rename in final df
@@ -363,7 +359,7 @@ midus_vars <- midus_data %>%
                      "smoking", "alcohol", "bmi") %>%
   # Removing row with NA value for grimage2_STD
   filter(
-    !is.na(grimage2_STD)
+    !is.na(grimage2_STD) #dropping missing value from grimage2
   ) %>%
   # Categorical variables should be coded as factors in order to invoke polyreg
   mutate(
