@@ -701,105 +701,139 @@ model5_non_hisp_black_dunedin <- lm(dunedinpace_STD ~
 summary(model5_non_hisp_black_dunedin)
 
 
-# Hispanic participants models
-grimage_hisp_subheading1_models <- list(
-  "Model 1" = model1_hisp_grimage,
-  "Model 2" = model2_hisp_grimage,
-  "Model 3" = model3_hisp_grimage, 
-  "Model 4" = model4_hisp_grimage,
-  "Model 5" = model5_hisp_grimage
-)
+# Exporting models as tables in word doc
+# First: creating lists of regression models
 
-duned_hisp_subheading1_models <- list(
-  "Model 1" = model1_hisp_dunedin,
-  "Model 2" = model2_hisp_dunedin,
-  "Model 3" = model3_hisp_dunedin, 
-  "Model 4" = model4_hisp_dunedin,
-  "Model 5" = model5_hisp_dunedin
-)
+# Overall labels for models:
+model_steps <- c("1", "2", "3", "4", "5")
+
+# Models for hispanic population:
+grimage_hisp_models <- list(model1_hisp_grimage, model2_hisp_grimage,
+                            model3_hisp_grimage, model4_hisp_grimage, 
+                            model5_hisp_grimage)
+
+dunedin_hisp_models <- list(model1_hisp_dunedin, model2_hisp_dunedin,
+                          model3_hisp_dunedin, model4_hisp_dunedin,
+                          model5_hisp_dunedin)
+
+
 
 # Non-Hispanic Black participants models
-grimage_nonhisp_black_subheading1_models <- list(
-  "Model 1" = model1_non_hisp_black_grimage,
-  "Model 2" = model2_non_hisp_black_grimage,
-  "Model 3" = model3_non_hisp_black_grimage,
-  "Model 4" = model4_non_hisp_black_grimage,
-  "Model 5" = model3_non_hisp_black_grimage
-)
+grimage_nonhisp_black_models <- list(model1_non_hisp_black_grimage,
+                                                 model2_non_hisp_black_grimage,
+                                                 model3_non_hisp_black_grimage,
+                                                 model4_non_hisp_black_grimage,
+                                                 model3_non_hisp_black_grimage
+                                                 )
 
-dunedin_nonhisp_black_subheading1_models <- list(
-  "Model 1" = model1_non_hisp_black_dunedin,
-  "Model 2" = model2_non_hisp_black_dunedin,
-  "Model 3" = model3_non_hisp_black_dunedin,
-  "Model 4" = model4_non_hisp_black_dunedin,
-  "Model 5" = model3_non_hisp_black_dunedin
-)
 
-# Organizing table structures based on model type
 
-hisp_outcomes <- list(
-  "GrimAge2 Results"    = grimage_hisp_subheading1_models,
-  "DunedinPACE Results" = duned_hisp_subheading1_models
-)
+dunedin_nonhisp_black_models <- list(model1_non_hisp_black_dunedin,
+                                     model2_non_hisp_black_dunedin,
+                                     model3_non_hisp_black_dunedin,
+                                     model4_non_hisp_black_dunedin,
+                                     model5_non_hisp_black_dunedin
+                                     ) 
+
+
+# Extracting independent variable from regression models
+cancerrisk_lm <- "cancerrisk_STD" 
+
+
+# Using broom to turn lm() to clean tibbles
+extract_model_stats <- function(model_list, model_names) {
+  map_dfr(seq_along(model_list), function(i) {
+    if (is.null(model_list[[i]])) return(NULL)
+    
+    tidy(model_list[[i]]) %>%
+      filter(term == cancerrisk_lm) %>%
+      select(estimate, p.value) %>%
+      mutate(
+        Model_Step = model_names[i],
+        estimate = round(estimate, 3),
+        # Assign stars based on standard significance thresholds
+        stars = case_when(
+          p.value < 0.001 ~ "***",
+          p.value < 0.01  ~ "**",
+          p.value < 0.05  ~ "*",
+          TRUE            ~ ""
+        ),
+        # Combine the rounded p-value and the stars into one text column
+        p_formatted = paste0(round(p.value, 5), stars)
+      ) %>%
+      select(Model_Step, estimate, p_formatted)
+  })
+}
+
+
+# Processing models for Hispanic population
+
+hisp_grim_clean <- extract_model_stats(grimage_hisp_models, model_steps) %>%
+  rename(grim_est = estimate, grim_p = p_formatted)
+
+hisp_dune_clean <- extract_model_stats(dunedin_hisp_models, model_steps) %>%
+  rename(dune_est = estimate, dune_p = p_formatted)
+
+# Combine into a single dataframe for flextable
+hisp_table_data <- left_join(hisp_grim_clean, hisp_dune_clean, by = "Model_Step")
+
+
+# Processing models of non-Hispanic Black participants
+black_grim_clean <- extract_model_stats(grimage_nonhisp_black_models, model_steps) %>%
+  rename(grim_est = estimate, grim_p = p_formatted)
+
+black_dune_clean <- extract_model_stats(dunedin_nonhisp_black_models, model_steps) %>%
+  rename(dune_est = estimate, dune_p = p_formatted)
+
+black_table_data <- left_join(black_grim_clean, black_dune_clean, by = "Model_Step")
+
+
+# Building flextables
+
+build_flextable <- function(df, title) {
+  flextable(df) %>%
+    set_header_labels(
+      Model_Step = "Model",
+      grim_est   = "Beta",
+      grim_p     = "p-value",
+      dune_est   = "Beta",
+      dune_p     = "p-value"
+    ) %>%
+    add_header_row(
+      values = c("", "GrimAge2", "DunedinPACE"),
+      colwidths = c(1, 2, 2)
+    ) %>%
+    add_header_row(
+      values = title,
+      colwidths = 5
+    ) %>%
+    # Add the significance legend directly underneath the table
+    add_footer_lines(
+      values = "Note: * p < 0.05; ** p < 0.01; *** p < 0.001"
+    ) %>%
+    theme_vanilla() %>%
+    align(align = "center", part = "all") %>%
+    align(j = 1, align = "left", part = "all") %>%
+    align(part = "footer", align = "left") %>% # Left-align the legend
+    bold(part = "header") %>%
+    bold(j = 1, part = "body") %>%
+    italic(part = "footer")             # Make the legend italicized
+}
+
+# Generate final tables
+ft_hispanic_final <- build_flextable(hisp_table_data, "Table 1: Adjusted associations between perceived cancer risk and epigenetic aging among Hispanic MIDUS Participants")
+ft_black_final <- build_flextable(black_table_data, "Table 2: Adjusted associations between perceived cancer risk and epigenetic aging among non-Hispanic Black MIDUS Participants")
+
+# View tables
+ft_hispanic_final
+ft_black_final
+
+# Initialize a blank Word Document
+doc <- read_docx() %>%
+  body_add_flextable(ft_hispanic_final) %>%
+  body_add_break() %>%
+   body_add_flextable(ft_black_final)
   
-nonhisp_black_outcomes <- list(
-  "GrimAge2 Results"    = grimage_nonhisp_black_subheading1_models,
-  "DunedinPACE Results" = dunedin_nonhisp_black_subheading1_models
-)
-
-structured_models <- list(
-  "Regression Analysis on Hispanic Participants"           = hisp_outcomes,
-  "Regression Analysis on non-Hispanic Black Participants" = nonhisp_black_outcomes
-)
-
-# Creating empty word document
-doc <- read_docx()
-
-# Loop completes document details (adding headers)
-# Output looks wild right now...ignore...will fix issue
-# by re-doing above lists and changing for loop
-
-for (strata_name in names(structured_models)) {
-  
-  # Add Stratum Name as a Section Header 
-  doc <- doc %>% body_add_par(strata_name, style = "heading 2")
-  
-  # Extract and flatten the nested list into a flat list of models
-  nested_outcome_list <- structured_models[[strata_name]]
-  flat_outcome_list   <- do.call(c, nested_outcome_list)
-  
-  # Extract the table data as a raw data frame first to standardize names safely
-  raw_table_df <- modelsummary(
-    flat_outcome_list, 
-    output = "data.frame", 
-    stars = TRUE,
-    coef_map = c(
-      "cancerrisk_STD" = "Perceived Cancer Risk (Std.)"
-    ),
-    gof_omit = ".*",
-    shape = term ~ model 
-  )
-  
-  # Standardize whichever column holds your outcome variables to "Response"
-  possible_cols <- c("group", "response", "dependent", "part")
-  found_col     <- intersect(colnames(raw_table_df), possible_cols)
-  
-  if (length(found_col) > 0) {
-     raw_table_df <- raw_table_df %>% rename(Response = !!sym(found_col[1]))
-   }
-   
-   # Turn the data frame into a grouped flextable
-   ft_table <- raw_table_df %>%
-     select(-any_of(c("rowid", "part"))) %>% 
-     as_grouped_data(groups = "Response", columns = NULL) %>% 
-     as_flextable() %>% 
-     bold(i = ~ !is.na(Response), bold = TRUE) %>% # Bold the Outcome headers
-     bold(part = "header")
-
-   # Append this finished table into your Word Document buffer
-   doc <- doc %>% 
-     body_add_flextable(ft_table) 
- }
 
 # Export file
 print(doc, target = "Output/ria_black_hispanic_models.docx")
