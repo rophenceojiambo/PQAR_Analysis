@@ -182,7 +182,7 @@ table2 %>%
 
 ```
 
-# Table 3: combining tables 1 & 2 (using add function, will be the actual table 1 in the paper)
+# Table 3: 
 
 ```{r}
 
@@ -344,7 +344,9 @@ ft
 save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
 ```
 
-#Multiple Imputation
+# Multiple Imputation
+
+
 ```{r}
 # Conducting multiple imputation 
 
