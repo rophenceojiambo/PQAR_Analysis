@@ -76,28 +76,35 @@ glimpse(midus_data)
 
 
 
+
+
+
+
+
 # Create ‘Table 1' univariate statistics on the study population
 
 ```{r}
 # creating overall descriptive statistics
 table1 <- midus_data %>% 
-  select(age, sex, race_eth, marital, education, income, num_chron, famcancer, efficacy, 
+  select(age, sex, race_eth, marital, education, income, famcancer, efficacy, 
          smoking, alcohol, bmi, cancerrisk, grimage2, dunedinpace) %>%
 
   tbl_summary( 
      type = list(
       # Quantitative (Continuous) Variables
-      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous",
+      c(grimage2, dunedinpace, bmi, age, income, cancerrisk, efficacy) ~ "continuous",
       # Categorical Variables
       c(race_eth, sex, marital, education, smoking, alcohol, famcancer) ~ "categorical") ,
     statistic = list( 
       all_continuous() ~ "{mean} ({sd})",   # Removed the c() wrapper
-      all_categorical() ~ "{n} ({p}%)" 
+      all_categorical() ~ "{n} ({p})" 
     ),
     missing = "ifany",
-    missing_stat = "{N_miss} ({p_miss}%)",  # this adds the frequency and % missing
+    missing_stat = "{N_miss} ({p_miss})",  # this adds the frequency and % missing
     missing_text = "Missing", 
-    digits = all_continuous() ~ 1, 
+    digits = list(all_continuous() ~ c(1,1), 
+                  all_categorical() ~ c(0,1)
+    ),
     label = list(
       race_eth ~ "Race/Ethnicity",
       grimage2 ~ "GrimAge2", 
@@ -108,7 +115,6 @@ table1 <- midus_data %>%
       marital ~ "Marital status",
       education ~ "Education attainment",
       income ~ "Annual household income",
-      num_chron ~ "Number of chronic Conditions",
       smoking ~ "Smoking status",
       alcohol ~ "Alcohol consumption",
       famcancer ~ "Family cancer history",
@@ -121,25 +127,23 @@ table1
 
 table1 %>% 
   as_flex_table() %>%
-  save_as_docx(path = "Output/Grace_Table 1 Overall Descriptives.docx")
+  save_as_docx(path = "Output/Table 1 Overall Descriptives.docx")
 
 ```
-
-
-
+#Table 2 
 
 # Create ‘Table 2' bivariate statistics on the study population
 ```{r}
 # Generate a basic summary table
 
 table2 <- midus_data %>%
-  select(age, sex, race_eth, marital, education, income, num_chron, famcancer, efficacy, 
+  select(age, sex, race_eth, marital, education, income, famcancer, efficacy, 
          smoking, alcohol, bmi, cancerrisk, grimage2, dunedinpace) %>%
 
 tbl_summary(by = race_eth,
      type = list(
       # Quantitative (Continuous) Variables
-      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous",
+      c(grimage2, dunedinpace, bmi, age, income, cancerrisk, efficacy) ~ "continuous",
       # Categorical Variables
       c(sex, marital, education, smoking, alcohol, famcancer) ~ "categorical") ,
     statistic = list( 
@@ -147,7 +151,7 @@ tbl_summary(by = race_eth,
       all_categorical() ~ "{n} ({p}%)" 
     ),
     missing = "ifany",
-    missing_stat = "{N_miss} ({p_miss}%)",  # this adds the frequency and % missing
+    missing_stat = "{N_miss} ({p_miss})",  # this adds the frequency and % missing
     missing_text = "Missing", 
     digits = all_continuous() ~ 1, 
     label = list(
@@ -159,7 +163,6 @@ tbl_summary(by = race_eth,
       marital ~ "Marital status",
       education ~ "Education attainment",
       income ~ "Annual household income",
-      num_chron ~ "Number of chronic Conditions",
       smoking ~ "Smoking status",
       alcohol ~ "Alcohol consumption",
       famcancer ~ "Family cancer history",
@@ -173,14 +176,15 @@ table2
 table2 %>% 
   as_flex_table() %>%
   save_as_docx(
-    path = "Output/Grace_Table 2 Descriptives by Race and Ethnicity.docx",
+    path = "Output/Table 2 Descriptives by Race and Ethnicity.docx",
     pr_section = prop_section(
       page_size = page_size(orient = "landscape", width = 11.7, height = 8.3))
       )
 
 ```
 
-# Table 3: combining tables 1 & 2 (using add function, will be the actual table 1 in the paper)
+
+# Table 3: 
 
 ```{r}
 
@@ -189,20 +193,21 @@ library(gtsummary)
 library(gt)
 
 
+
 table3 <- midus_data %>%
-  select(age, sex, race_eth, marital, education, income, num_chron, famcancer, efficacy, 
+  select(age, sex, race_eth, marital, education, income, famcancer, efficacy, 
          smoking, alcohol, bmi, cancerrisk, grimage2, dunedinpace) %>%
 
 tbl_summary(by = race_eth,
    type = list(
       # Quantitative (Continuous) Variables
-      c(grimage2, dunedinpace, bmi, age, income, num_chron, cancerrisk, efficacy) ~ "continuous",
+      c(grimage2, dunedinpace, bmi, age, income, cancerrisk, efficacy) ~ "continuous",
       # Categorical Variables
       c(sex, marital, education, smoking, alcohol, famcancer) ~ "categorical"),
 
     statistic = list( 
       all_continuous() ~ "{mean} ({sd})",   # Removed the c() wrapper
-      all_categorical() ~ "{n} ({p}%)" 
+      all_categorical() ~ "{n} ({p})" 
     ),
 
     missing = "ifany",
@@ -223,14 +228,21 @@ tbl_summary(by = race_eth,
       marital ~ "Marital status",
       education ~ "Education attainment",
       income ~ "Annual household income",
-      num_chron ~ "Number of chronic Conditions",
       smoking ~ "Smoking status",
       alcohol ~ "Alcohol consumption",
       famcancer ~ "Family cancer history",
       cancerrisk ~ "Perceived cancer risk", 
       efficacy ~ "Self-efficacy for cancer prevention"))  %>% 
   add_overall() %>% 
-  add_p() %>%
+      add_p(
+    test = list(
+      all_categorical() ~ "chisq.test",
+      all_continuous() ~ "kruskal.test"
+    ),
+    test.args = list( 
+      all_tests("chisq.test") ~ list(simulate.p.value = TRUE, B = 2000)),
+    pvalue_fun = ~ style_pvalue(.x, digits = 3)
+  ) %>%
   add_stat_label() %>%
   bold_labels() %>%
   modify_caption("Table 3: Descriptive Statistics Overall and Stratified by Race and Ethnicity")
@@ -241,18 +253,20 @@ table3 %>%
   as_flex_table() %>%
   set_table_properties(layout = "autofit", width = 1) %>%
   save_as_docx(
-    path = "Output/Grace_Table 3 Descriptive Overall and by Race and Ethnicity.docx",
+    path = "Output/Table 3 Descriptive Overall and by Race and Ethnicity.docx",
     pr_section = prop_section(
       page_size = page_size(orient = "landscape", width = 11.7, height = 8.3))
       )
+
 ```
 
 
-```{r}
+#Table 4: correlation matrix
 
+```{r}
 #Table 4: Zero-Order Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with #emphasis on outcomes and exposure
 cor_vars <- midus_data %>%
-  select(grimage2, dunedinpace, age, num_chron, cancerrisk_STD, efficacy)
+  select(grimage2, dunedinpace, age, cancerrisk_STD, efficacy)
 
 #Convert to a matrix
 vars_matrix <- as.matrix(cor_vars)
@@ -287,12 +301,11 @@ final_df <- tibble::rownames_to_column(final_df, var = "Variable")
 #Professional variable labels
 #vector mapping old names to new labels
 clean_labels <- c(
-  "grimage2"        = "GrimAge2",
-  "dunedinpace"     = "DunedinPACE",
+  "grimage2"        = "GrimAge2 z-score",
+  "dunedinpace"     = "DunedinPACE z-score",
   "age"             = "Age",
-  "num_chron"       = "Number of chronic conditions",
   "cancerrisk_STD"  = "Perceived cancer risk z-score",
-  "efficacy"        = "Self-efficacy"
+  "efficacy"        = "Self-efficacy for Cancer Prevention"
 )
 
 #rename in final df
@@ -321,7 +334,7 @@ ft <- flextable(final_df) %>%
   align(j = 1, align = "left", part = "all") %>% 
   align(j = 2:ncol(final_df), align = "center", part = "all") %>%
   # Add a table title
-  add_header_lines("Table 3. Zero-order correlations among epigenetic aging measures, perceived cancer risk, age, self-efficacy, and chronic conditions.") %>%
+  add_header_lines("1.1. Table 3. Zero-order correlations among epigenetic aging measures, perceived cancer risk, age, self-efficacy, and chronic conditions.") %>%
   #footer with stars info
   add_footer_lines("* p < 0.05, ** p < 0.01, *** p < 0.001") %>%
   font(fontname = "Arial", part = "all")
@@ -329,34 +342,32 @@ ft <- flextable(final_df) %>%
 ft
 
 #export
-save_as_docx(ft, path = "Output/Grace_Table_4_Correlation_Matrix.docx")
+save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
 ```
 
 
 
-#multiple imputation
+# Multiple Imputation
+
 
 ```{r}
-
-#Multiple imputation 
-#loading packages 
-library(tidyverse)    # Data wrangling and visualization
-library(mice)         # Multiple imputation
-library(missRanger)   # Random forest imputation
-library(VIM)
-library(dplyr)
-
-# Set seed for reproducibility
-set.seed(0864)
+# Conducting multiple imputation 
 
 # Subsetting the data to include the two standardized outcomes, 
 # the standardized exposure, the moderator and the 11 covariates
 #15 vars total 
+# checking for row containing NA value in grimAge2_STD
+print(is.na(midus_data$grimage2_STD))
+
 midus_vars <- midus_data %>% 
-              select("income", "num_chron", "famcancer", "efficacy",
+              select("income", "famcancer", "efficacy",
                      "marital", "education", "grimage2_STD", "dunedinpace_STD",
                      "cancerrisk_STD", "race_eth", "age", "sex",
                      "smoking", "alcohol", "bmi") %>%
+  # Removing row with NA value for grimage2_STD
+  filter(
+    !is.na(grimage2_STD) #dropping missing value from grimage2
+  ) %>%
   # Categorical variables should be coded as factors in order to invoke polyreg
   mutate(
       race_eth = factor(race_eth),
@@ -367,7 +378,15 @@ midus_vars <- midus_data %>%
       marital = factor(marital),
       famcancer = factor(famcancer)
     )
-         
+
+
+# confirming NA value has been removed
+print(is.na(midus_vars$grimage2_STD))
+
+# Run Little's MCAR
+mcar_test(midus_vars)
+# statistic df  p-value  missing.patterns
+# 212.3461	162	0.004844206	13	
 
 # Create a clean character vector tracking all variables in our target analysis subset
 analysis_variables <- names(midus_vars)
@@ -407,7 +426,7 @@ midus_methods <- make.method(midus_vars)
 midus_methods # Looking to check method types for categorical vars
 
 # Assigning new methods to categorical variables
-midus_methods["education"] <- "polr"
+midus_methods["education"] <- "polr" # changed this from "polyreg" as education is an ordered categorical variable
 #polyreg used for categorical values with 2+ categories
 midus_methods["famcancer"] <- "logreg" #logreg for nominal categorical values
 midus_methods["marital"] <- "polyreg"
@@ -428,7 +447,9 @@ df_mice_completed
 
 # Re-run missing summary on the complete dataset to verify all missingness dropped to 0%
 missing_summary(df_mice_completed, analysis_variables)
+
 ```
+
 
 #regression analysis
 
@@ -437,44 +458,94 @@ missing_summary(df_mice_completed, analysis_variables)
 #Regression analysis 
 # Split into two explicit data frames as requested
 df_overall <- df_mice_completed
-df_white   <- df_mice_completed %>% filter(race_eth == "non-Hispanic White")
-df_white
+#df_white   <- df_mice_completed %>% filter(race_eth == "non-Hispanic White")
+#df_white
 # --- Outcome: GrimAge2 (Overall) ---
-grim_ov_m1 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + race_eth, data = df_overall)
-grim_ov_m2 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + race_eth, data = df_overall)
-grim_ov_m3 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + race_eth, data = df_overall)
-grim_ov_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + race_eth, data = df_overall)
-grim_ov_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi + race_eth, data = df_overall)
+# --- Outcome: GrimAge (Overall) ---
+
+# Model 1: perceived cancer risk + age + sex + race/ethnicity + marital status + education + income
+grim_ov_m1 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income, 
+                 data = df_overall)
+
+# Model 2: Model 1 + family cancer history
+grim_ov_m2 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+                 famcancer, 
+                 data = df_overall)
+
+# Model 3: Model 2 + self-efficacy for cancer prevention
+grim_ov_m3 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+                 famcancer + efficacy, 
+                 data = df_overall)
+
+# Model 4: Model 3 + smoking + alcohol use
+grim_ov_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+                 famcancer + efficacy + smoking + alcohol, 
+                 data = df_overall)
+
+# Model 5: Model 4 + BMI
+grim_ov_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+                 famcancer + efficacy + smoking + alcohol + bmi, 
+                 data = df_overall)
+
+# Model 6: Model 5 + perceived cancer risk × race/ethnicity interaction
+grim_ov_m6 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+                 famcancer + efficacy + smoking + alcohol + bmi + (cancerrisk_STD * race_eth), 
+                 data = df_overall) #cancer time race
 
 # --- Outcome: DunedinPACE (Overall) ---
-pace_ov_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + race_eth, data = df_overall)
-pace_ov_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + race_eth, data = df_overall)
-pace_ov_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + race_eth, data = df_overall)
-pace_ov_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + race_eth, data = df_overall)
-pace_ov_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi + race_eth, data = df_overall)
+# --- Outcome: DunedinPACE (Overall) ---
+
+# Model 1: perceived cancer risk + age + sex + race/ethnicity + marital status + education + income
+pace_ov_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income, 
+                 data = df_overall)
+
+# Model 2: Model 1 + family cancer history
+pace_ov_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+                 famcancer, 
+                 data = df_overall)
+
+# Model 3: Model 2 + self-efficacy for cancer prevention
+pace_ov_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+                 famcancer + efficacy, 
+                 data = df_overall)
+
+# Model 4: Model 3 + smoking + alcohol use
+pace_ov_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+                 famcancer + efficacy + smoking + alcohol, 
+                 data = df_overall)
+
+# Model 5: Model 4 + BMI
+pace_ov_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+                 famcancer + efficacy + smoking + alcohol + bmi, 
+                 data = df_overall)
+
+# Model 6: Model 5 + perceived cancer risk × race/ethnicity interaction
+pace_ov_m6 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+                 famcancer + efficacy + smoking + alcohol + bmi + (cancerrisk_STD * race_eth), 
+                 data = df_overall)
 
 # --- Outcome: GrimAge2 (White Sample) ---
-grim_wh_m1 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital, data = df_white)
-grim_wh_m2 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income, data = df_white)
-grim_wh_m3 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer, data = df_white)
-grim_wh_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy, data = df_white)
-grim_wh_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi, data = df_white)
+#grim_wh_m1 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital, data = df_white)
+#grim_wh_m2 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income, data = df_white)
+#grim_wh_m3 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer, data = df_white)
+#grim_wh_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy, data = df_white)
+#grim_wh_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi, data = df_white)
 
 # --- Outcome: DunedinPACE (White Sample) ---
-pace_wh_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital, data = df_white)
-pace_wh_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income, data = df_white)
-pace_wh_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer, data = df_white)
-pace_wh_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy, data = df_white)
-pace_wh_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi, data = df_white)
+#pace_wh_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital, data = df_white)
+#pace_wh_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income, data = df_white)
+#pace_wh_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer, data = df_white)
+#pace_wh_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy, data = df_white)
+#pace_wh_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi, data = df_white)
 
-summary(pace_wh_m1)
+#summary(pace_wh_m1)
 summary(pace_ov_m1)
 
 # Group models into logical lists
 models_grim_overall <- list("M1" = grim_ov_m1, "M2" = grim_ov_m2, "M3" = grim_ov_m3, "M4" = grim_ov_m4, "M5" = grim_ov_m5)
 models_pace_overall <- list("M1" = pace_ov_m1, "M2" = pace_ov_m2, "M3" = pace_ov_m3, "M4" = pace_ov_m4, "M5" = pace_ov_m5)
-models_grim_white   <- list("M1" = grim_wh_m1, "M2" = grim_wh_m2, "M3" = grim_wh_m3, "M4" = grim_wh_m4, "M5" = grim_wh_m5)
-models_pace_white   <- list("M1" = pace_wh_m1, "M2" = pace_wh_m2, "M3" = pace_wh_m3, "M4" = pace_wh_m4, "M5" = pace_wh_m5)
+#models_grim_white   <- list("M1" = grim_wh_m1, "M2" = grim_wh_m2, "M3" = grim_wh_m3, "M4" = grim_wh_m4, "M5" = grim_wh_m5)
+#models_pace_white   <- list("M1" = pace_wh_m1, "M2" = pace_wh_m2, "M3" = pace_wh_m3, "M4" = pace_wh_m4, "M5" = pace_wh_m5)
 
   # Tell R EXACTLY which rows to show, and what to rename them
   # Any variable NOT listed here will be hidden from the Word table!
@@ -517,10 +588,8 @@ models_pace_white   <- list("M1" = pace_wh_m1, "M2" = pace_wh_m2, "M3" = pace_wh
 # Build the document step-by-step
 doc <- add_clean_table_to_word(doc, "Table 1: GrimAge2 Regression Models (Overall Sample)", models_grim_overall)
 doc <- add_clean_table_to_word(doc, "Table 2: DunedinPACE Regression Models (Overall Sample)", models_pace_overall)
-doc <- add_clean_table_to_word(doc, "Table 3: GrimAge2 Regression Models (White Sample)", models_grim_white)
-doc <- add_clean_table_to_word(doc, "Table 4: DunedinPACE Regression Models (White Sample)", models_pace_white)
  
-output_filepath <- "Output/grace_overall_white_models.docx"
+output_filepath <- "Output/grace_overall_models.docx"
 print(doc, target = output_filepath)
 
 #white population lower coefficient for perceived cancer primage 2 in all models 
