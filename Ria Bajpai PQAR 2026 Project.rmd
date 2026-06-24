@@ -460,7 +460,7 @@ set.seed(0864)
 print(is.na(midus_data$grimage2_STD))
 
 midus_vars <- midus_data %>% 
-              select("income", "num_chron", "famcancer", "efficacy",
+              select("income", "famcancer", "efficacy",
                      "marital", "education", "grimage2_STD", "dunedinpace_STD",
                      "cancerrisk_STD", "race_eth", "age", "sex",
                      "smoking", "alcohol", "bmi") %>%
