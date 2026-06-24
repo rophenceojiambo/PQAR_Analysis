@@ -30,7 +30,6 @@ library(Hmisc) #corr
 library(kableExtra)
 
 
-
 #package used for Latex (knitting to PDF for Mac)
 library(tinytex)
 
@@ -303,20 +302,20 @@ bind_rows(
   tidy(m5_nonh_grim) %>% mutate(model = "Model 5 GrimAge2 STD")
 ) %>%
   filter(term != "(Intercept)") %>%
-  select(model, term, estimate, std.error, statistic, p.value) %>%
+  select(model, term, estimate, std.error, statistic, p.value) %>% #95% CI and p-val for grim and duned together and second beta coefficient
   kable(caption = "GrimAge2 and Cancer Risk Regression Results for Non-Hispanic Other")
 
 #regression of dunedinpace_STD
-m1_nonh_dune <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital,
+m1_nonh_duned <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital,
                       data = other_pop)
 
-m2_nonh_dune <- lm(grimage2_STD ~ dunedinpace_STD + education + income,
+m2_nonh_duned <- lm(grimage2_STD ~ dunedinpace_STD + education + income,
                       data = other_pop)
 
-m3_nonh_dune <- lm(grimage2_STD ~ dunedinpace_STD + num_chron + famcancer,
+m3_nonh_duned <- lm(grimage2_STD ~ dunedinpace_STD + num_chron + famcancer,
                       data = other_pop)
 
-m4_nonh_dune <- lm(grimage2_STD ~ dunedinpace_STD + efficacy,
+m4_nonh_duned <- lm(grimage2_STD ~ dunedinpace_STD + efficacy,
                       data = other_pop)
 
 m5_nonh_duned <- lm(dunedinpace_STD ~ cancerrisk_STD + smoking + alcohol,
