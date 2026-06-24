@@ -488,7 +488,7 @@ grim_ov_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital 
                  data = df_overall)
 
 # Model 6: Model 5 + perceived cancer risk × race/ethnicity interaction
-grim_ov_m6 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+grim_ov_m6 <- lm(grimage2_STD ~  age + sex + race_eth + marital + education + income + 
                  famcancer + efficacy + smoking + alcohol + bmi + (cancerrisk_STD * race_eth), 
                  data = df_overall) #cancer time race
 
@@ -520,7 +520,7 @@ pace_ov_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marit
                  data = df_overall)
 
 # Model 6: Model 5 + perceived cancer risk × race/ethnicity interaction
-pace_ov_m6 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
+pace_ov_m6 <- lm(dunedinpace_STD ~ + age + sex + race_eth + marital + education + income + 
                  famcancer + efficacy + smoking + alcohol + bmi + (cancerrisk_STD * race_eth), 
                  data = df_overall)
 
@@ -541,58 +541,58 @@ pace_ov_m6 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marit
 #summary(pace_wh_m1)
 summary(pace_ov_m1)
 
-# Group models into logical lists
-models_grim_overall <- list("M1" = grim_ov_m1, "M2" = grim_ov_m2, "M3" = grim_ov_m3, "M4" = grim_ov_m4, "M5" = grim_ov_m5)
-models_pace_overall <- list("M1" = pace_ov_m1, "M2" = pace_ov_m2, "M3" = pace_ov_m3, "M4" = pace_ov_m4, "M5" = pace_ov_m5)
-#models_grim_white   <- list("M1" = grim_wh_m1, "M2" = grim_wh_m2, "M3" = grim_wh_m3, "M4" = grim_wh_m4, "M5" = grim_wh_m5)
-#models_pace_white   <- list("M1" = pace_wh_m1, "M2" = pace_wh_m2, "M3" = pace_wh_m3, "M4" = pace_wh_m4, "M5" = pace_wh_m5)
+#saving to 
 
-  # Tell R EXACTLY which rows to show, and what to rename them
-  # Any variable NOT listed here will be hidden from the Word table!
- add_clean_table_to_word <- function(doc, title, model_list) {
-  
-  # CRITICAL FIX: Only map the exposure variable. 
-  # This hides all other control variables/races from the visual table, 
-  # but keeps them active in the background regression math.
-  variables_to_show <- c(
+
+# moel objects into named list
+grim_list <- list(
+  "M1" = grim_ov_m1, "M2" = grim_ov_m2, "M3" = grim_ov_m3,
+  "M4" = grim_ov_m4, "M5" = grim_ov_m5, "M6" = grim_ov_m6
+)
+
+pace_list <- list(
+  "M1" = pace_ov_m1, "M2" = pace_ov_m2, "M3" = pace_ov_m3,
+  "M4" = pace_ov_m4, "M5" = pace_ov_m5, "M6" = pace_ov_m6
+)
+
+#what we want to show
+ variables_to_show <- c(
     "(Intercept)"    = "(Intercept)",
     "cancerrisk_STD" = "Perceived Cancer Risk"
   )
-  
-  # Generate the customized table layout
-  tab <- modelsummary(
-    model_list, 
-    output   = "flextable", 
-    stars    = TRUE,                   # Adds standard significance stars (*, **, ***)
-    coef_map = variables_to_show,      # Tells R to ONLY display these rows
-    gof_map  = c("nobs", "r.squared"), # Cleans up goodness-of-fit row metrics
-  
-    # Glue the estimate and the 95% confidence intervals 
-    estimate = "estimate",
-    statistic = "[{conf.low}, {conf.high}]"
+  # --- 2. Use modelsummary to automatically extract Estimates, CIs, and p-values ---
+table_grim <- modelsummary(
+  grim_list, 
+  output    = "flextable", 
+  estimate  = "estimate",
+  statistic = "[{conf.low}, {conf.high}]", # <-- Force 95% CI beneath the estimate
+  stars     = TRUE,  # Keeps the significance stars (*, **, ***) on the estimate
+  fmt       = 3,     # Three decimal places
+  coef_map  = variables_to_show,      
+  gof_map   = c("nobs", "r.squared")
+) %>% 
+  set_table_properties(layout = "autofit", width = 1)
+
+table_pace <- modelsummary(
+  pace_list, 
+  output    = "flextable", 
+  estimate  = "estimate",
+  statistic = "[{conf.low}, {conf.high}]", # <-- Force 95% CI beneath the estimate
+  stars     = TRUE,  
+  fmt       = 3, 
+  coef_map  = variables_to_show,      
+  gof_map   = c("nobs", "r.squared")
+) %>% 
+  set_table_properties(layout = "autofit", width = 1)
+
+
+# --- 3. Save as a gorgeous landscape Word document using flextable's saver ---
+save_as_docx(
+  `Table 1: GrimAge2 Models` = table_grim,
+  `Table 2: DunedinPACE Models` = table_pace,
+  path = "Output/grace_overall_models.docx",
+  pr_section = prop_section(
+    page_size = page_size(orient = "landscape", width = 11.7, height = 8.3)
   )
-  
- tab %>% autofit() 
-  # Append title and table structure to the running word document object
-  doc <- doc %>% 
-    body_add_par(title, style = "heading 1") %>% 
-    body_add_flextable(tab) %>% 
-    body_add_par("", style = "Normal") # Blank space separator
-  
-  return(doc)
- }
- 
- doc <- read_docx()
-
-
-# Build the document step-by-step
-doc <- add_clean_table_to_word(doc, "Table 1: GrimAge2 Regression Models (Overall Sample)", models_grim_overall)
-doc <- add_clean_table_to_word(doc, "Table 2: DunedinPACE Regression Models (Overall Sample)", models_pace_overall)
- 
-output_filepath <- "Output/grace_overall_models.docx"
-print(doc, target = output_filepath)
-
-#white population lower coefficient for perceived cancer primage 2 in all models 
-#much lower for dunedinpace, but no p-value association 
- 
+)
 ```
