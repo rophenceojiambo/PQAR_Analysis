@@ -564,12 +564,12 @@ pace_list <- list(
 table_grim <- modelsummary(
   grim_list, 
   output    = "flextable", 
-  estimate  = "estimate",
+  estimate  = "estimate", #draw raw regression coefficient 
   statistic = "[{conf.low}, {conf.high}]", # <-- Force 95% CI beneath the estimate
   stars     = TRUE,  # Keeps the significance stars (*, **, ***) on the estimate
   fmt       = 3,     # Three decimal places
   coef_map  = variables_to_show,      
-  gof_map   = c("nobs", "r.squared")
+  #gof_map   = c("nobs", "r.squared") # number of obs and R^2 at the bottom of the table
 ) %>% 
   set_table_properties(layout = "autofit", width = 1)
 
@@ -581,7 +581,7 @@ table_pace <- modelsummary(
   stars     = TRUE,  
   fmt       = 3, 
   coef_map  = variables_to_show,      
-  gof_map   = c("nobs", "r.squared")
+  #gof_map   = c("nobs", "r.squared")
 ) %>% 
   set_table_properties(layout = "autofit", width = 1)
 
