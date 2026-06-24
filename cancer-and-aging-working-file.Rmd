@@ -349,7 +349,7 @@ save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
 print(is.na(midus_data$grimage2_STD))
 
 midus_vars <- midus_data %>% 
-              select("income", "famcancer", "efficacy_STD",
+              select("income", "famcancer", "efficacy",
                      "marital", "education", "grimage2_STD", "dunedinpace_STD",
                      "cancerrisk_STD", "race_eth", "age", "sex",
                      "smoking", "alcohol", "bmi") %>%
