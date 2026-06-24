@@ -27,7 +27,6 @@ library(corrr)
 library(tibble)
 library(misty)
 library(Hmisc) #corr
-library(kableExtra)
 
 
 #package used for Latex (knitting to PDF for Mac)
@@ -181,88 +180,8 @@ flextable(Correlation_Matrix_fmt) %>%
   autofit() %>%
   save_as_docx(path = "Table_4_Correlation_Matrix.docx")
 
-# - - - - - - - - - - -MULTIPLE IMPUTATION- - - -- - - - - - 
-# Conducting multiple imputation 
+# - - - - - - - - - - -NEXT- - - -- - - - - - 
 
-# Subsetting the data to include the two standardized outcomes, 
-# the standardized exposure, the moderator and the 11 covariates
-#15 vars total 
-midus_vars <- midus_data %>% 
-              select("income", "num_chron", "famcancer", "efficacy",
-                     "marital", "education", "grimage2_STD", "dunedinpace_STD",
-                     "cancerrisk_STD", "race_eth", "age", "sex",
-                     "smoking", "alcohol", "bmi") %>%
-  # Categorical variables should be coded as factors in order to invoke polyreg
-  mutate(
-      race_eth = factor(race_eth),
-      alcohol = factor(alcohol),
-      sex = factor(sex),
-      education = factor(education, ordered = TRUE),
-      smoking = factor(smoking),
-      marital = factor(marital),
-      famcancer = factor(famcancer)
-    )
-         
-
-# Create a clean character vector tracking all variables in our target analysis subset
-analysis_variables <- names(midus_vars)
-
-md.pattern(midus_data) # Counting number of NA
-# Pattern summary: 1087 rows of 1156 that are complete. 
-
-md.pairs(midus_data) # Determining four missing patterns 
-# Looking at mr / rm values helps understand which values have overlapping data
-# to make them eligible for calculating imputations. 
-
-#missing summary function 
-missing_summary <- function(data, vars) {
-  data %>%
-    summarise(
-      across(
-        all_of(vars), #across all the given vars
-        ~ mean(is.na(.x)) * 100 # percentage of variables w/ missing values
-      )
-    ) %>% #create a data set w/ names - variable names, values - percent missing
-    pivot_longer(
-      cols = everything(),
-      names_to = "variable",
-      values_to = "percent_missing"
-    ) %>%
-  arrange(desc(percent_missing)) #arrange output in descending over 
-}
-
-
-missing_summary(midus_data, analysis_variables)
-
-#predictor matrix 
-pred <- mice(midus_vars, maxit = 0)$predictorMatrix 
-
-# Creating a methods object
-midus_methods <- make.method(midus_vars) 
-midus_methods # Looking to check method types for categorical vars
-
-# Assigning new methods to categorical variables
-midus_methods["education"] <- "polr" # changed this from "polyreg" as education is an ordered categorical variable
-#polyreg used for categorical values with 2+ categories
-midus_methods["famcancer"] <- "logreg" #logreg for nominal categorical values
-midus_methods["marital"] <- "polyreg"
-midus_methods # Checking to ensure variables are updated
-
-imp <- mice(
-  midus_vars, # data: what we want to impute
-  m = 10, # number of imputations to perform
-  seed = 0864,
-  printFlag = FALSE,
-  method = midus_methods
-)
-
-# Extract the first completed imputed dataset
-df_mice_completed <- complete(imp, action = 1)
-df_mice_completed
-
-
-# Re-run missing summary on the complete dataset to verify all missingness dropped to 0%
-missing_summary(df_mice_completed, analysis_variables)
 
 
 
@@ -272,25 +191,23 @@ missing_summary(df_mice_completed, analysis_variables)
 
 
 ```{r regression}
-#Additional: kableextra library used
-#subset by race: non-Hispanic Other
-other_pop <- df_mice_completed[df_mice_completed$race_eth == "non-Hispanic Other", ]
-
-#regression of grimage2_STD
 m1_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital,
-                      data = other_pop)
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
 m1_nonh_grim
 
 m2_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + education + income,
-                      data = other_pop)
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
 
 m3_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + num_chron + famcancer,
-                      data = other_pop)
-
-m4_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + efficacy,
-                      data = other_pop)
-
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
+m4_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + efficacy_STD,
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
 m5_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + smoking + alcohol,
+<<<<<<< HEAD
                       data = other_pop)
 
 #Table of results
@@ -332,5 +249,13 @@ bind_rows(
   filter(term != "(Intercept)") %>%
   select(model, term, estimate, std.error, statistic, p.value) %>%
   kable(caption = "DunedinPACE and Cancer Risk Regression Results for Non-Hispanic Other")
+=======
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
+#dunedin
+m1_nonh_dune <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital,
+                      data = midus_data,
+                      subset = (race_eth == "non-Hispanic Other"))
+>>>>>>> 6ab1ecbafdda62cd4571a8cfd3ee403f5cb00014
 
 ```
