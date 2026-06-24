@@ -207,7 +207,6 @@ m4_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + efficacy_STD,
                       data = midus_data,
                       subset = (race_eth == "non-Hispanic Other"))
 m5_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + smoking + alcohol,
-<<<<<<< HEAD
                       data = other_pop)
 
 #Table of results
@@ -249,13 +248,6 @@ bind_rows(
   filter(term != "(Intercept)") %>%
   select(model, term, estimate, std.error, statistic, p.value) %>%
   kable(caption = "DunedinPACE and Cancer Risk Regression Results for Non-Hispanic Other")
-=======
-                      data = midus_data,
-                      subset = (race_eth == "non-Hispanic Other"))
-#dunedin
-m1_nonh_dune <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital,
-                      data = midus_data,
-                      subset = (race_eth == "non-Hispanic Other"))
->>>>>>> 6ab1ecbafdda62cd4571a8cfd3ee403f5cb00014
+              
 
 ```

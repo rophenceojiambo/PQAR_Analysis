@@ -257,7 +257,7 @@ table3 %>%
 ```{r}
 #Table 4: Zero-Order Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with #emphasis on outcomes and exposure
 cor_vars <- midus_data %>%
-  select(grimage2, dunedinpace, age, cancerrisk_STD, efficacy)
+  select(grimage2_STD, dunedinpace_STD, age, cancerrisk_STD, efficacy)
 
 #Convert to a matrix
 vars_matrix <- as.matrix(cor_vars)
@@ -292,8 +292,8 @@ final_df <- tibble::rownames_to_column(final_df, var = "Variable")
 #Professional variable labels
 #vector mapping old names to new labels
 clean_labels <- c(
-  "grimage2"        = "GrimAge2 z-score",
-  "dunedinpace"     = "DunedinPACE z-score",
+  "grimage2_STD"        = "GrimAge2 z-score",
+  "dunedinpace_STD"     = "DunedinPACE z-score",
   "age"             = "Age",
   "cancerrisk_STD"  = "Perceived cancer risk z-score",
   "efficacy"        = "Self-efficacy for Cancer Prevention"
@@ -312,8 +312,8 @@ ft <- flextable(final_df) %>%
   #set header labels
   set_header_labels(
     Variable = "Variable",
-    grimage2 = "1",
-    dunedinpace = "2",
+    grimage2_STD = "1",
+    dunedinpace_std = "2",
     age = "3",
     num_chron = "4",
     cancerrisk_STD = "5",
