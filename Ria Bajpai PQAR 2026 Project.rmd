@@ -67,6 +67,10 @@ theme_gtsummary_journal(journal = "jama")
 
 
 table1 <- midus_data %>%
+# Removing row with NA value for grimage2_STD
+  filter(
+    !is.na(grimage2_STD)
+  ) %>%
 # Mutating continuous variables to include "Missing" category
 mutate(
     marital = as.character(marital),
@@ -130,9 +134,9 @@ mutate(
               missing = "ifany",
               missing_stat = "{N_miss} ({p_miss}%)",  # this adds the frequency and % missing
               missing_text = "Missing") %>%  # here you can now use  missing_text = "Missing" if you have coded categorical variables with missing values as Missing, previously it was missing = "ifany" which also shows missing values in continouous variables, and we do not want that.
-  modify_caption("**Table 1. Overall Descriptive Characteristics of MIDUS Participants**") %>%
+  modify_caption("Table 1. Overall Descriptive Characteristics of MIDUS Participants") %>%
   modify_header(label ~ "**Characteristic**") %>%
-  bold_labels()
+  bold_labels() 
 
   table1
 
@@ -206,7 +210,7 @@ table2 <- midus_data %>%
     pvalue_fun = ~ style_pvalue(.x, digits = 3)
   ) %>%
   modify_caption(
-    "**Table 2. Descriptive Characteristics of MIDUS Participants by Race and Ethnicity**"
+    "Table 2. Descriptive Characteristics of MIDUS Participants by Race and Ethnicity"
   ) %>%
   modify_header(label ~ "**Characteristic**") %>%
   bold_labels()
@@ -282,7 +286,7 @@ table3 <- midus_data %>%
     pvalue_fun = ~ style_pvalue(.x, digits = 3)
   ) %>%
   modify_caption(
-    "**Table 3. Descriptive Characteristics of MIDUS Participants by Race and Ethnicity**"
+    "Table 3. Descriptive Characteristics of MIDUS Participants by Race and Ethnicity"
   ) %>%
   modify_header(label ~ "**Characteristic**") %>%
   bold_labels()
@@ -293,16 +297,35 @@ table3
 # Export as word document
 ```{r}
   library(flextable)
+  sect_properties <- prop_section(
+    page_size = page_size(orient = "landscape"),
+    page_margins = page_mar(top = 0.5, bottom = 0.5, left = 0.5, right = 0.5)
+  )
   table1 %>%
     as_flex_table() %>%
+    autofit() %>%
     flextable::save_as_docx(path = "Output/Ria_table_1_descriptive_characteristics.docx")
   
   table2 %>%
     as_flex_table() %>%
-    flextable::save_as_docx(path = "Output/Ria_ttable_2_stratified_descriptive_characteristics.docx")
-  
-  table3 %>%
+    autofit() %>%
+    flextable::save_as_docx(path = "Output/Ria_table_2_stratified_descriptive_characteristics.docx")
+
+  table3_fix <- table3 %>%
     as_flex_table() %>%
+    # Forces fixed layout
+    flextable::set_table_properties(layout = "fixed") %>%
+  
+    # Increases width of cells for text-wrapping
+    flextable::width(j = "label", width = 2) %>%
+    
+    # Setting uniform width for other columns
+    flextable::width(j = 2:flextable::ncol_keys(.), width = 0.8) %>%
+  
+    # Shrinking font and padding
+    flextable::fontsize(size = 9, part = "all") %>%
+    flextable::padding(padding.top = 0.5, padding.bottom = 0.5, part = "all") %>%
+    
     flextable::save_as_docx(path = "Output/Ria_table_3_overall_stratified_descriptive_characteristics.docx")
 
 ```
@@ -460,7 +483,7 @@ set.seed(0864)
 # the standardized exposure, the moderator and the 11 covariates
 
 # checking for row containing NA value in grimAge2_STD
-#print(is.na(midus_data$grimage2_STD))
+# print(is.na(midus_data$grimage2_STD))
 
 midus_vars <- midus_data %>% 
               select("income", "famcancer", "efficacy",
@@ -484,7 +507,7 @@ midus_vars <- midus_data %>%
               
 
 # confirming NA value has been removed
-#print(is.na(midus_vars$grimage2_STD))
+# print(is.na(midus_vars$grimage2_STD))
 ```
 
 # Summarizing missing data
@@ -571,8 +594,6 @@ missing_summary(df_mice_completed, names(df_mice_completed))
 ```
 
 ## Ria's regression models
-
->>>Okay but check the updated regression tasks on the meeting notes, we are no longer doing stratified but 5 overall models for the analytic sample, plus model 6, which is model 5 + interaction term. You can keep this stratified models for learning purposes. Again, number of chronic conditions should not appear anywhere in the analysis. Jemar said we won't use it as a predictor. The code doesn't run because of num_chron
 
 
 ```{r}
@@ -807,6 +828,7 @@ grimage_models <- list(
   m4_grimage2, m5_grimage2, m6_grimage2
 )
 
+
 ```
 
 
@@ -816,7 +838,7 @@ grimage_wide <- modelsummary(
   grimage_models, 
   output = "data.frame", 
   shape = term + model ~ statistic, # Makes Beta and P-value horizontal columns
-  statistic = "p.value",
+  statistic = c("p.value", "({conf.low}, {conf.high})"),
   stars = TRUE,
   coef_map = c("cancerrisk_STD" = "Perceived Cancer Risk (Std.)"),
   gof_omit = ".*"
@@ -824,7 +846,8 @@ grimage_wide <- modelsummary(
   select(-part) %>%
   rename(
     GrimAge2_Beta = Est., 
-    `GrimAge2_p-value` = p
+    `GrimAge2_CI` = `({conf.low}, {conf.high})`,
+    `GrimAge2_p-value` = p,
   )
 
 
@@ -833,7 +856,7 @@ dunedin_wide <- modelsummary(
   dunedin_models, 
   output = "data.frame", 
   shape = term + model ~ statistic, 
-  statistic = "p.value",
+  statistic = c("p.value", "({conf.low}, {conf.high})"),
   stars = TRUE,
   coef_map = c("cancerrisk_STD" = "Perceived Cancer Risk (Std.)"),
   gof_omit = ".*"
@@ -841,7 +864,8 @@ dunedin_wide <- modelsummary(
   select(-part) %>%
   rename(
     DunedinPace_Beta = Est., 
-    `DunedinPace` = p
+    `DunedinPACE_CI` = `({conf.low}, {conf.high})`,
+    `DunedinPace` = p,
   )
 
 
@@ -870,13 +894,15 @@ ft <- flextable(final_table_data) %>%
   # Adding group headers
   add_header_row(
     values = c("", "GrimAge2", "DunedinPACE"),
-    colwidths = c(1, 2, 2)
+    colwidths = c(1, 3, 3)
   ) %>%
   set_header_labels(
     model = "Model",
     GrimAge2_Beta = "Beta",
+    GrimAge2_CI = "95% CI",
     `GrimAge2_p-value` = "p-value",
     DunedinPace_Beta = "Beta",
+    DunedinPACE_CI = "95% CI",
     `DunedinPace` = "p-value"
   ) %>%
   add_footer_lines(
@@ -890,6 +916,6 @@ doc <- read_docx() %>%
   body_add_flextable(ft) 
   
 # Export file
-print(doc, target = "Output/ria_overall_model.docx")
+print(doc, target = "Output/ria_overall_models.docx")
 ```
 
