@@ -565,43 +565,76 @@ pace_list <- list(
 )
 
 #what we want to show
- variables_to_show <- c(
-    "(Intercept)"    = "(Intercept)",
-    "cancerrisk_STD" = "Perceived Cancer Risk"
-  )
+
+
+
   # modelsummary to automatically extract Estimates, CIs, and p-values ---
-table_grim <- modelsummary(
+df_grim <- modelsummary(
   grim_list, 
-  output    = "flextable", 
-  estimate  = "estimate", #draw raw regression coefficient 
+  output    = "data.frame", 
+  estimate  = "{estimate} {stars}",
   statistic = "[{conf.low}, {conf.high}]", # <-- Force 95% CI beneath the estimate
   stars     = TRUE,  # Keeps the significance stars (*, **, ***) on the estimate
   fmt       = 3,     # Three decimal places
-  coef_map  = variables_to_show,      
+ coef_map = c("cancerrisk_STD" = "GrimAge2"),
+  gof_omit = ".*",
   #gof_map   = c("nobs", "r.squared") # number of obs and R^2 at the bottom of the table
-) %>% 
-  set_table_properties(layout = "autofit", width = 1)
+) 
 
-table_pace <- modelsummary(
+df_pace <- modelsummary(
   pace_list, 
-  output    = "flextable", 
-  estimate  = "estimate",
+  output    = "data.frame", 
+  estimate  = "{estimate} {stars}",
   statistic = "[{conf.low}, {conf.high}]", # <-- Force 95% CI beneath the estimate
   stars     = TRUE,  
   fmt       = 3, 
-  coef_map  = variables_to_show,      
+  coef_map  = c("cancerrisk_STD" = "DunedinPACE"), 
+  gof_omit = ".*"
   #gof_map   = c("nobs", "r.squared")
-) %>% 
-  set_table_properties(layout = "autofit", width = 1)
+) 
 
+# FIXED: Changed the second df_grim to df_pace so both models stack
+stacked_df <- bind_rows(df_grim, df_pace) %>% 
+  select(-part, -statistic) 
 
-# landscape Word document using flextable's saver
+# 4. Turn the stacked data frame into your final flextable and format headers
+final_table_flextable <- flextable(stacked_df) %>%
+  set_table_properties(layout = "autofit", width = 1) %>%
+  # Remove the duplicate labels in the first column ("term") by blanking out rows 2 and 4
+  mk_par(i = c(2, 4), j = "term", value = as_paragraph("")) %>%
+  # Remove the "term" header text by replacing it with a blank space ""
+  set_header_labels(
+    term = "",
+    M1 = "M1", M2 = "M2", M3 = "M3", M4 = "M4", M5 = "M5", M6 = "M6"
+  ) %>%
+  
+  # Add the β (95% CI) subheader row directly beneath M1 - M6
+  add_header_row(
+    values = c("", rep("β (95% CI)", 6)),
+    top = FALSE # Tells flextable to place this row below the M1-M6 row
+  ) %>%
+  
+  
+  # Make the M1 - M6 headers bold (row 1 of the header)
+  bold(i = 1, j = 2:7, part = "header") %>%
+  
+  # Make the row labels bold (only rows 1 and 3 since 2 and 4 are now blank)
+  bold(i = c(1, 3), j = 1, part = "body") %>%
+  
+  # Clean up alignments for professional formatting
+  align(align = "center", part = "header") %>%
+  align(j = 1, align = "left", part = "header")
+
+# 5. Save the final flextable to Word
+# FIXED: Re-aligned the backticks and quotes for the caption name block
 save_as_docx(
-  `Table 1: GrimAge2 Models` = table_grim,
-  `Table 2: DunedinPACE Models` = table_pace,
+  `Table 4: Overall models with standardized beta coefficients (and 95% confidence intervals) from a series of linear regression models quantifying the association between perceived cancer risk and epigenetic aging among MIDUS II sample ` = final_table_flextable,  
   path = "Output/grace_overall_models.docx",
   pr_section = prop_section(
     page_size = page_size(orient = "landscape", width = 11.7, height = 8.3)
   )
 )
+
+
 ```
+
