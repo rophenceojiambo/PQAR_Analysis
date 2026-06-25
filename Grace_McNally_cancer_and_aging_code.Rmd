@@ -127,7 +127,7 @@ table1
 
 table1 %>% 
   as_flex_table() %>%
-  save_as_docx(path = "Output/Table 1 Overall Descriptives.docx")
+  save_as_docx(path = "Output/Grace_Table 1 Overall Descriptives.docx")
 
 ```
 #Table 2 
@@ -176,7 +176,7 @@ table2
 table2 %>% 
   as_flex_table() %>%
   save_as_docx(
-    path = "Output/Table 2 Descriptives by Race and Ethnicity.docx",
+    path = "Output/Grace_Table 2 Descriptives by Race and Ethnicity.docx",
     pr_section = prop_section(
       page_size = page_size(orient = "landscape", width = 11.7, height = 8.3))
       )
@@ -253,7 +253,7 @@ table3 %>%
   as_flex_table() %>%
   set_table_properties(layout = "autofit", width = 1) %>%
   save_as_docx(
-    path = "Output/Table 3 Descriptive Overall and by Race and Ethnicity.docx",
+    path = "Output/Grace_Table 3 Descriptive Overall and by Race and Ethnicity.docx",
     pr_section = prop_section(
       page_size = page_size(orient = "landscape", width = 11.7, height = 8.3))
       )
@@ -342,7 +342,7 @@ ft <- flextable(final_df) %>%
 ft
 
 #export
-save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
+save_as_docx(ft, path = "Output/Grace_Table_4_Correlation_Matrix.docx")
 ```
 
 
@@ -384,6 +384,7 @@ midus_vars <- midus_data %>%
 print(is.na(midus_vars$grimage2_STD))
 
 # Run Little's MCAR
+library(naniar)  # you need this package to run MCAR (Roph)
 mcar_test(midus_vars)
 # statistic df  p-value  missing.patterns
 # 212.3461	162	0.004844206	13	
