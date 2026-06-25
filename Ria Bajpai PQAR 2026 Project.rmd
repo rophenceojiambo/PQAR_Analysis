@@ -53,7 +53,7 @@ midus_data <- readRDS(analysis_path) #midus_data: data from MIDUS cancer subproj
 
 ```
  
-**Before doing any further analysis below, remove the one participant with missing outcome >> Rophence**
+**Before doing any further analysis below, remove the one participant with missing outcome. Also format the code for saving as word document. Your outputs are not aligned within the pagewidth, chnage to landscape, use autofit, e.t.c >> Rophence**
 
 
 Create ‘Table 1' univariate statistics on the study population
