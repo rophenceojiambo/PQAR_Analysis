@@ -52,7 +52,8 @@ midus_data <- readRDS(analysis_path) #midus_data: data from MIDUS cancer subproj
 # Adding descriptive labels to data frame >> you did not need to do this, as you are subsetting the dataset just to create labels, yet subseqent anlysis will require some of the standardized variables not included in this subset. One way to add labels is using the label function in tbl_summary. What you did here creates spaces in Variable names and variable names should not have spaces, so use label function within tbl_summary
 
 ```
-
+ 
+**Before doing any further analysis below, remove the one participant with missing outcome >> Rophence**
 
 
 Create ‘Table 1' univariate statistics on the study population
@@ -85,7 +86,7 @@ mutate(
     famcancer = factor(famcancer, levels = c("No", "Yes", "Missing"))
   ) %>%
 
-  # Selecting for variables that will displayed in table
+  # Selecting for variables that will displayed in table (Don't include number of chronic conditions in all analysis >>> Rophence)
    select(age, sex, race_eth, marital, education,
          smoking, alcohol, income, famcancer, num_chron, bmi,
          cancerrisk_STD, efficacy_STD, dunedinpace_STD, grimage2_STD
@@ -306,7 +307,7 @@ table3
 
 ## Ria's correlation table
 ```{r}
-# Selecting all numerical data
+# Selecting all numerical data (Don't include chronic conditions in all analysis >> Rophence)
   midus_corr <- midus_data %>% 
                 select("income", "num_chron", "efficacy_STD",
                       "grimage2_STD", "dunedinpace_STD",
@@ -457,7 +458,7 @@ set.seed(0864)
 # the standardized exposure, the moderator and the 11 covariates
 
 # checking for row containing NA value in grimAge2_STD
-print(is.na(midus_data$grimage2_STD))
+#print(is.na(midus_data$grimage2_STD))
 
 midus_vars <- midus_data %>% 
               select("income", "famcancer", "efficacy",
@@ -481,7 +482,7 @@ midus_vars <- midus_data %>%
               
 
 # confirming NA value has been removed
-print(is.na(midus_vars$grimage2_STD))
+#print(is.na(midus_vars$grimage2_STD))
 ```
 
 # Summarizing missing data
@@ -568,6 +569,10 @@ missing_summary(df_mice_completed, names(df_mice_completed))
 ```
 
 ## Ria's regression models
+
+>>>Okay but check the updated regression tasks on the meeting notes, we are no longer doing stratified but 5 overall models for the analytic sample, plus model 6, which is model 5 + interaction term. You can keep this stratified models for learning purposes. Again, number of chronic conditions should not appear anywhere in the analysis. Jemar said we won't use it as a predictor. The code doesn't run because of num_chron
+
+
 ```{r}
 # Models for Hispanic participants
 # GrimAge2 & DunedinPACE Model 1
