@@ -493,8 +493,7 @@ grim_ov_m6 <- lm(grimage2_STD ~  age + sex + race_eth + marital + education + in
                  famcancer + efficacy + smoking + alcohol + bmi + (cancerrisk_STD * race_eth), 
                  data = df_overall) #cancer time race
 
-# --- Outcome: DunedinPACE (Overall) ---
-# --- Outcome: DunedinPACE (Overall) ---
+#outcome dunedinpace
 
 # Model 1: perceived cancer risk + age + sex + race/ethnicity + marital status + education + income
 pace_ov_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income, 
@@ -561,7 +560,7 @@ pace_list <- list(
     "(Intercept)"    = "(Intercept)",
     "cancerrisk_STD" = "Perceived Cancer Risk"
   )
-  # --- 2. Use modelsummary to automatically extract Estimates, CIs, and p-values ---
+  # modelsummary to automatically extract Estimates, CIs, and p-values ---
 table_grim <- modelsummary(
   grim_list, 
   output    = "flextable", 
@@ -587,7 +586,7 @@ table_pace <- modelsummary(
   set_table_properties(layout = "autofit", width = 1)
 
 
-# --- 3. Save as a gorgeous landscape Word document using flextable's saver ---
+# landscape Word document using flextable's saver
 save_as_docx(
   `Table 1: GrimAge2 Models` = table_grim,
   `Table 2: DunedinPACE Models` = table_pace,
