@@ -464,177 +464,89 @@ missing_summary(df_mice_completed, analysis_variables)
 #regression analysis
 
 ```{r}
-# =========================================
-#Regression analysis 
-# Split into two explicit data frames as requested
+# =========================================================================
+# 1. REGRESSION MODELS (Overall Sample)
+# =========================================================================
 df_overall <- df_mice_completed
-#df_white   <- df_mice_completed %>% filter(race_eth == "non-Hispanic White")
-#df_white
-# --- Outcome: GrimAge2 (Overall) ---
-# --- Outcome: GrimAge (Overall) ---
 
-# Model 1: perceived cancer risk + age + sex + race/ethnicity + marital status + education + income
-grim_ov_m1 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income, 
-                 data = df_overall)
+# --- Outcome: GrimAge2 ---
+grim_ov_m1 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income, data = df_overall)
+grim_ov_m2 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer, data = df_overall)
+grim_ov_m3 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy, data = df_overall)
+grim_ov_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol, data = df_overall)
+grim_ov_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
+grim_ov_m6 <- lm(grimage2_STD ~ age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi + (cancerrisk_STD * race_eth), data = df_overall)
 
-# Model 2: Model 1 + family cancer history
-grim_ov_m2 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
-                 famcancer, 
-                 data = df_overall)
+# --- Outcome: DunedinPACE ---
+pace_ov_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income, data = df_overall)
+pace_ov_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer, data = df_overall)
+pace_ov_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy, data = df_overall)
+pace_ov_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol, data = df_overall)
+pace_ov_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
+pace_ov_m6 <- lm(dunedinpace_STD ~ age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi + (cancerrisk_STD * race_eth), data = df_overall)
 
-# Model 3: Model 2 + self-efficacy for cancer prevention
-grim_ov_m3 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
-                 famcancer + efficacy, 
-                 data = df_overall)
+# Create two flat lists
+grim_list <- list("M1"=grim_ov_m1, "M2"=grim_ov_m2, "M3"=grim_ov_m3, "M4"=grim_ov_m4, "M5"=grim_ov_m5, "M6"=grim_ov_m6)
+pace_list <- list("M1"=pace_ov_m1, "M2"=pace_ov_m2, "M3"=pace_ov_m3, "M4"=pace_ov_m4, "M5"=pace_ov_m5, "M6"=pace_ov_m6)
 
-# Model 4: Model 3 + smoking + alcohol use
-grim_ov_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
-                 famcancer + efficacy + smoking + alcohol, 
-                 data = df_overall)
-
-# Model 5: Model 4 + BMI
-grim_ov_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
-                 famcancer + efficacy + smoking + alcohol + bmi, 
-                 data = df_overall)
-
-# Model 6: Model 5 + perceived cancer risk × race/ethnicity interaction
-grim_ov_m6 <- lm(grimage2_STD ~  age + sex + race_eth + marital + education + income + 
-                 famcancer + efficacy + smoking + alcohol + bmi + (cancerrisk_STD * race_eth), 
-                 data = df_overall) #cancer time race
-
-#outcome dunedinpace
-
-# Model 1: perceived cancer risk + age + sex + race/ethnicity + marital status + education + income
-pace_ov_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income, 
-                 data = df_overall)
-
-# Model 2: Model 1 + family cancer history
-pace_ov_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
-                 famcancer, 
-                 data = df_overall)
-
-# Model 3: Model 2 + self-efficacy for cancer prevention
-pace_ov_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
-                 famcancer + efficacy, 
-                 data = df_overall)
-
-# Model 4: Model 3 + smoking + alcohol use
-pace_ov_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
-                 famcancer + efficacy + smoking + alcohol, 
-                 data = df_overall)
-
-# Model 5: Model 4 + BMI
-pace_ov_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + 
-                 famcancer + efficacy + smoking + alcohol + bmi, 
-                 data = df_overall)
-
-# Model 6: Model 5 + perceived cancer risk × race/ethnicity interaction
-pace_ov_m6 <- lm(dunedinpace_STD ~ + age + sex + race_eth + marital + education + income + 
-                 famcancer + efficacy + smoking + alcohol + bmi + (cancerrisk_STD * race_eth), 
-                 data = df_overall)
-
-# --- Outcome: GrimAge2 (White Sample) ---
-#grim_wh_m1 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital, data = df_white)
-#grim_wh_m2 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income, data = df_white)
-#grim_wh_m3 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer, data = df_white)
-#grim_wh_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy, data = df_white)
-#grim_wh_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi, data = df_white)
-
-# --- Outcome: DunedinPACE (White Sample) ---
-#pace_wh_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital, data = df_white)
-#pace_wh_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income, data = df_white)
-#pace_wh_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer, data = df_white)
-#pace_wh_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy, data = df_white)
-#pace_wh_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital + education + income + num_chron + famcancer + efficacy + smoking + alcohol + bmi, data = df_white)
-
-#summary(pace_wh_m1)
-summary(pace_ov_m1)
-
-#saving to 
-
-
-# moel objects into named list
-grim_list <- list(
-  "M1" = grim_ov_m1, "M2" = grim_ov_m2, "M3" = grim_ov_m3,
-  "M4" = grim_ov_m4, "M5" = grim_ov_m5, "M6" = grim_ov_m6
+# Variable mappings
+variables_to_show <- c(
+  "cancerrisk_STD"                            = "Perceived Cancer Risk (Main Effect)",
+  "race_ethnon-Hispanic Black:cancerrisk_STD" = "Perceived cancer risk * non-Hispanic Black",
+  "race_ethHispanic:cancerrisk_STD"           = "Perceived cancer risk * Hispanic",
+  "race_ethnon-Hispanic Other:cancerrisk_STD" = "Perceived cancer risk * non-Hispanic Other"
 )
 
-pace_list <- list(
-  "M1" = pace_ov_m1, "M2" = pace_ov_m2, "M3" = pace_ov_m3,
-  "M4" = pace_ov_m4, "M5" = pace_ov_m5, "M6" = pace_ov_m6
-)
-
-#what we want to show
-
-
-
-  # modelsummary to automatically extract Estimates, CIs, and p-values ---
+# =========================================================================
+# 2. EXTRACT NATIVE DATA FRAMES FROM MODELSUMMARY
+# =========================================================================
+# By using output = "data.frame", we escape the list processing errors entirely
 df_grim <- modelsummary(
-  grim_list, 
-  output    = "data.frame", 
-  estimate  = "{estimate} {stars}",
-  statistic = "[{conf.low}, {conf.high}]", # <-- Force 95% CI beneath the estimate
-  stars     = TRUE,  # Keeps the significance stars (*, **, ***) on the estimate
-  fmt       = 3,     # Three decimal places
- coef_map = c("cancerrisk_STD" = "GrimAge2"),
-  gof_omit = ".*",
-  #gof_map   = c("nobs", "r.squared") # number of obs and R^2 at the bottom of the table
-) 
+  grim_list, output = "data.frame", gof_omit = ".*", fmt = 2,
+  estimate = "{estimate}{stars}\n[{conf.low}, {conf.high}]", statistic = NULL,
+  coef_map = variables_to_show
+) %>%
+  mutate(`Outcome Metric` = "GrimAge2")
 
 df_pace <- modelsummary(
-  pace_list, 
-  output    = "data.frame", 
-  estimate  = "{estimate} {stars}",
-  statistic = "[{conf.low}, {conf.high}]", # <-- Force 95% CI beneath the estimate
-  stars     = TRUE,  
-  fmt       = 3, 
-  coef_map  = c("cancerrisk_STD" = "DunedinPACE"), 
-  gof_omit = ".*"
-  #gof_map   = c("nobs", "r.squared")
-) 
+  pace_list, output = "data.frame", gof_omit = ".*", fmt = 2,
+  estimate = "{estimate}{stars}\n[{conf.low}, {conf.high}]", statistic = NULL,
+  coef_map = variables_to_show
+) %>%
+  mutate(`Outcome Metric` = "DunedinPACE")
 
-# FIXED: Changed the second df_grim to df_pace so both models stack
-stacked_df <- bind_rows(df_grim, df_pace) %>% 
-  select(-part, -statistic) 
+# =========================================================================
+# 3. MERGE AND CLEAN ROW DATA SHAPES
+# =========================================================================
+final_df <- bind_rows(df_grim, df_pace) %>%
+  # Position "Outcome Metric" first on the left, followed by the Predictor (term)
+  select(`Outcome Metric`, Predictor = term, M1, M2, M3, M4, M5, M6)
 
-# 4. Turn the stacked data frame into your final flextable and format headers
-final_table_flextable <- flextable(stacked_df) %>%
+# =========================================================================
+# 4. BUILD THE FINAL SEAMLESS FLEXTABLE
+# =========================================================================
+final_table <- flextable(final_df) %>%
+  # Merge duplicate Outcome Metric labels vertically for a clean visual block
+  merge_v(j = "Outcome Metric") %>% 
+  valign(j = "Outcome Metric", valign = "top") %>%
+  # Match your document style guidelines
+  add_footer_lines("* p < 0.05, ** p < 0.01, *** p < 0.001.") %>%
   set_table_properties(layout = "autofit", width = 1) %>%
-  # Remove the duplicate labels in the first column ("term") by blanking out rows 2 and 4
-  mk_par(i = c(2, 4), j = "term", value = as_paragraph("")) %>%
-  # Remove the "term" header text by replacing it with a blank space ""
-  set_header_labels(
-    term = "",
-    M1 = "M1", M2 = "M2", M3 = "M3", M4 = "M4", M5 = "M5", M6 = "M6"
-  ) %>%
-  
-  # Add the β (95% CI) subheader row directly beneath M1 - M6
-  add_header_row(
-    values = c("", rep("β (95% CI)", 6)),
-    top = FALSE # Tells flextable to place this row below the M1-M6 row
-  ) %>%
-  
-  
-  # Make the M1 - M6 headers bold (row 1 of the header)
-  bold(i = 1, j = 2:7, part = "header") %>%
-  
-  # Make the row labels bold (only rows 1 and 3 since 2 and 4 are now blank)
-  bold(i = c(1, 3), j = 1, part = "body") %>%
-  
-  # Clean up alignments for professional formatting
-  align(align = "center", part = "header") %>%
-  align(j = 1, align = "left", part = "header")
+  set_caption(
+    caption = "Table 4: Overall models with standardized beta coefficients (and 95% confidence intervals) from a series of linear regression models quantifying the association between perceived cancer risk and epigenetic aging among MIDUS II sample"
+  )
 
-# 5. Save the final flextable to Word
-# FIXED: Re-aligned the backticks and quotes for the caption name block
+# =========================================================================
+# 5. EXPORT TO WORD
+# =========================================================================
+if(!dir.exists("Output")) dir.create("Output")
+
 save_as_docx(
-  `Table 4: Overall models with standardized beta coefficients (and 95% confidence intervals) from a series of linear regression models quantifying the association between perceived cancer risk and epigenetic aging among MIDUS II sample ` = final_table_flextable,  
+  final_table,
   path = "Output/grace_overall_models.docx",
   pr_section = prop_section(
     page_size = page_size(orient = "landscape", width = 11.7, height = 8.3)
   )
 )
 
-
 ```
-
