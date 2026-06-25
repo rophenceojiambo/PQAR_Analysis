@@ -79,7 +79,9 @@ glimpse(midus_data)
 table1 <- midus_data %>% 
   select(age, sex, race_eth, marital, education, income, famcancer, efficacy, 
          smoking, alcohol, bmi, cancerrisk, grimage2, dunedinpace) %>%
-
+ filter(
+    !is.na(grimage2) #dropping missing value from grimage2
+  ) %>%
   tbl_summary( 
      type = list(
       # Quantitative (Continuous) Variables
@@ -132,7 +134,9 @@ table1 %>%
 table2 <- midus_data %>%
   select(age, sex, race_eth, marital, education, income, famcancer, efficacy, 
          smoking, alcohol, bmi, cancerrisk, grimage2, dunedinpace) %>%
-
+ filter(
+    !is.na(grimage2) #dropping missing value from grimage2
+  ) %>%
 tbl_summary(by = race_eth,
      type = list(
       # Quantitative (Continuous) Variables
@@ -189,7 +193,9 @@ library(gt)
 table3 <- midus_data %>%
   select(age, sex, race_eth, marital, education, income, famcancer, efficacy, 
          smoking, alcohol, bmi, cancerrisk, grimage2, dunedinpace) %>%
-
+ filter(
+    !is.na(grimage2) #dropping missing value from grimage2
+  ) %>%
 tbl_summary(by = race_eth,
    type = list(
       # Quantitative (Continuous) Variables
@@ -257,7 +263,10 @@ table3 %>%
 ```{r}
 #Table 4: Zero-Order Correlation Matrix -> perceived cancer risk unadjusted relationships between variables with #emphasis on outcomes and exposure
 cor_vars <- midus_data %>%
-  select(grimage2_STD, dunedinpace_STD, age, cancerrisk_STD, efficacy)
+  select(grimage2_STD, dunedinpace_STD, age, cancerrisk_STD, efficacy) %>%
+   filter(
+    !is.na(grimage2_STD) #dropping missing value from grimage2
+  ) 
 
 #Convert to a matrix
 vars_matrix <- as.matrix(cor_vars)
@@ -353,6 +362,7 @@ midus_vars <- midus_data %>%
                      "marital", "education", "grimage2_STD", "dunedinpace_STD",
                      "cancerrisk_STD", "race_eth", "age", "sex",
                      "smoking", "alcohol", "bmi") %>%
+  # using efficacy not efficacy_STD
   # Removing row with NA value for grimage2_STD
   filter(
     !is.na(grimage2_STD) #dropping missing value from grimage2
