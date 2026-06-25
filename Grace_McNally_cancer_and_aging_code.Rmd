@@ -502,14 +502,14 @@ variables_to_show <- c(
 # =========================================================================
 # By using output = "data.frame", we escape the list processing errors entirely
 df_grim <- modelsummary(
-  grim_list, output = "data.frame", gof_omit = ".*", fmt = 2,
+  grim_list, output = "data.frame", gof_omit = ".*", fmt = 3,
   estimate = "{estimate}{stars}\n[{conf.low}, {conf.high}]", statistic = NULL,
   coef_map = variables_to_show
 ) %>%
   mutate(`Outcome Metric` = "GrimAge2")
 
 df_pace <- modelsummary(
-  pace_list, output = "data.frame", gof_omit = ".*", fmt = 2,
+  pace_list, output = "data.frame", gof_omit = ".*", fmt = 3,
   estimate = "{estimate}{stars}\n[{conf.low}, {conf.high}]", statistic = NULL,
   coef_map = variables_to_show
 ) %>%
@@ -521,11 +521,13 @@ df_pace <- modelsummary(
 final_df <- bind_rows(df_grim, df_pace) %>%
   # Position "Outcome Metric" first on the left, followed by the Predictor (term)
   select(`Outcome Metric`, Predictor = term, M1, M2, M3, M4, M5, M6)
+  
 
 # =========================================================================
 # 4. BUILD THE FINAL SEAMLESS FLEXTABLE
 # =========================================================================
 final_table <- flextable(final_df) %>%
+
   # Merge duplicate Outcome Metric labels vertically for a clean visual block
   merge_v(j = "Outcome Metric") %>% 
   valign(j = "Outcome Metric", valign = "top") %>%
@@ -550,3 +552,9 @@ save_as_docx(
 )
 
 ```
+
+
+
+
+
+
