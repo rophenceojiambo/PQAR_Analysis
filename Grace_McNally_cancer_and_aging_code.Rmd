@@ -553,7 +553,7 @@ save_as_docx(
 
 ```
 
-#overall summary tables 
+#overall/supplemental tabletables 
 ```{r}
 #baseline summary simplest model 
 modelsummary(grim_list)
@@ -561,6 +561,7 @@ modelsummary(pace_list)
 
 #creating publication ready tables 
 
+#DunedinPACE data 
 
 #coefficient map 
 # Map your R coefficients to the exact display names from the table
