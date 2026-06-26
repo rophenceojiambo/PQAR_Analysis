@@ -553,6 +553,89 @@ save_as_docx(
 
 ```
 
+#overall summary tables 
+```{r}
+#baseline summary simplest model 
+modelsummary(grim_list)
+modelsummary(pace_list)
+
+#creating publication ready tables 
+
+
+#coefficient map 
+# Map your R coefficients to the exact display names from the table
+coef_map <- c(
+  "cancerrisk_STD" = "Perceived cancer risk (z-score)",
+  "age" = "Age",
+  "sexFemale" = "Female",
+  "race_ethnon-Hispanic Black" = "non-Hispanic Black",
+  "race_ethHispanic" = "Hispanic",
+  "race_ethnon-Hispanic Other" = "non-Hispanic Other",
+  "maritalDivorced/Separated/Widowed" = "Divorced/Separated/Widowed",
+  "maritalNever married" = "Never married",
+  "educationsome college/associate's degree" = "Some college/associate's degree",
+  "educationcollege degree or higher" = "College degree or higher",
+  "income" = "Annual household income",
+  "famcancerYes" = "Yes",
+  "efficacy" = "Self-efficacy for cancer prevention",
+  "smokingPast" = "Past",
+  "smokingCurrent" = "Current",
+  "alcohol<1 day a week" = "<1 day a week",
+  "alcohol1-2 days a week" = "1-2 days a week",
+  "alcohol3+ days a week" = "3+ days a week",
+  "bmi" = "Body mass index (kg/m²)",
+  "cancerrisk_STD:race_ethnon-Hispanic Black" = "Perceived cancer risk (z-score) * non-Hispanic Black",
+  "cancerrisk_STD:race_ethHispanic" = "Perceived cancer risk (z-score) * Hispanic",
+  "cancerrisk_STD:race_ethnon-Hispanic Other" = "Perceived cancer risk (z-score) * non-Hispanic Other"
+)
+
+# 1. Generate the base table with modelsummary
+raw_table <- modelsummary(
+  pace_list,
+  output = "gt",
+  estimate = "{estimate} ({conf.low} to {conf.high})", # Formats as Beta (95% CI)
+  statistic = NULL,                                    # Removes standard errors row
+  coef_map = coef_map,
+  gof_map = NA,                                        # Removes R2, AIC, etc. from bottom
+  title = "Supplemental Table. Adjusted associations between perceived cancer risk and DunedinPACE among 1,155 participants from the Midlife in the United States Study."
+)
+
+# 2. Corrected gt code (removes the broken tab_cols_merge function)
+final_table <- raw_table %>%
+  cols_label(
+    "M1" = html("Model 1<br><small>Beta (95% CI)</small>"),
+    "M2" = html("Model 2<br><small>Beta (95% CI)</small>"),
+    "M3" = html("Model 3<br><small>Beta (95% CI)</small>"),
+    "M4" = html("Model 4<br><small>Beta (95% CI)</small>"),
+    "M5" = html("Model 5<br><small>Beta (95% CI)</small>"),
+    "M6" = html("Model 6<br><small>Beta (95% CI)</small>")
+  ) %>%
+  # Align text left for labels, center for numbers
+  cols_align(align = "left", columns = 1) %>%
+  cols_align(align = "center", columns = 2:7) %>%
+  # Add footnotes/abbreviations at the bottom
+  tab_source_note(source_note = "Abbreviation: CI = Confidence Interval") %>%
+  tab_source_note(source_note = "Abbreviation: CI = Confidence interval. Results were pooled across ten imputed datasets.") %>%
+  # Apply clean APA/Journal style styling
+  tab_options(
+    table.border.top.color = "black",
+    table.border.top.width = px(2),
+    table.border.bottom.color = "black",
+    table.border.bottom.width = px(2),
+    column_labels.border.bottom.color = "black",
+    column_labels.border.bottom.width = px(1.5),
+    table_body.border.bottom.color = "black",
+    table_body.border.bottom.width = px(1.5),
+    heading.title.font.weight = "bold",
+    heading.title.font.size = pct(110)
+  )
+
+# Display the fixed table
+final_table
+
+```
+
+
 
 
 
