@@ -473,7 +473,7 @@ grim_ov_m2 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital 
 grim_ov_m3 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer, data = df_overall)
 grim_ov_m4 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy, data = df_overall)
 grim_ov_m5 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
-grim_ov_m6 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
+
 
 # --- Outcome: DunedinPACE ---
 pace_ov_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital, data = df_overall)
@@ -481,11 +481,11 @@ pace_ov_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marit
 pace_ov_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer, data = df_overall)
 pace_ov_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy, data = df_overall)
 pace_ov_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
-pace_ov_m6 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
+
 
 # Create two flat lists containing all 6 models
-grim_list <- list("M1"=grim_ov_m1, "M2"=grim_ov_m2, "M3"=grim_ov_m3, "M4"=grim_ov_m4, "M5"=grim_ov_m5, "M6"=grim_ov_m6)
-pace_list <- list("M1"=pace_ov_m1, "M2"=pace_ov_m2, "M3"=pace_ov_m3, "M4"=pace_ov_m4, "M5"=pace_ov_m5, "M6"=pace_ov_m6)
+grim_list <- list("M1"=grim_ov_m1, "M2"=grim_ov_m2, "M3"=grim_ov_m3, "M4"=grim_ov_m4, "M5"=grim_ov_m5)
+pace_list <- list("M1"=pace_ov_m1, "M2"=pace_ov_m2, "M3"=pace_ov_m3, "M4"=pace_ov_m4, "M5"=pace_ov_m5)
 
 # Variable mappings
 # Variable mappings (Updated to handle both R naming conventions)
@@ -526,7 +526,7 @@ df_pace <- modelsummary(
 # =========================================================================
 final_df <- bind_rows(df_grim, df_pace) %>%
   # Keep columns M1 through M6 intact
-  select(`Outcome Metric`, Predictor = term, M1, M2, M3, M4, M5, M6)
+  select(`Outcome Metric`, Predictor = term, M1, M2, M3, M4, M5)
 
 # =========================================================================
 # 4. BUILD THE FINAL SEAMLESS FLEXTABLE
@@ -822,13 +822,15 @@ final_table_grim <- raw_table_grim %>%
   )
 
 # Display the fixed GrimAge2 table
-final_table_grim
+final_table_grim <- gt() %>%
+  tab_header(
+    title = "Motor Trend Car Road Tests",
 
 # =========================================================================
 # EXPORT GT TABLE DIRECTLY TO WORD 
 # =========================================================================
 # Ensure the output folder exists before exporting
-if(!dir.exists("Output")) dir.create("Output")
+if(!dir.exists("Adjusted associations between perceived cancer risk and GrimAge2  ")) dir.create("Output")
 
 # Save the gt table directly as a .docx file
 gtsave(
