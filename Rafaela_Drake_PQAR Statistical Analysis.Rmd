@@ -27,6 +27,9 @@ library(corrr)
 library(tibble)
 library(misty)
 library(Hmisc) #corr
+library(modelsummary) #overall regression table
+library(naniar)
+
 
 
 #package used for Latex (knitting to PDF for Mac)
@@ -166,88 +169,268 @@ ft
 save_as_docx(ft, path = "Table_4_Correlation_Matrix.docx")
 
 
-
-      
-      
-      
-      
-
-#- - - - - - OLD
-Correlation_Matrix_fmt <- Correlation_Matrix %>%
-  mutate(across(where(is.numeric), ~ ifelse(is.na(.), "", formatC(., format = "f", digits = 3))))
-
-flextable(Correlation_Matrix_fmt) %>%
-  autofit() %>%
-  save_as_docx(path = "Table_4_Correlation_Matrix.docx")
-
 # - - - - - - - - - - -NEXT- - - -- - - - - - 
+#multiple imputation
+# Conducting multiple imputation 
+
+# Subsetting the data to include the two standardized outcomes, 
+# the standardized exposure, the moderator and the 11 covariates
+#15 vars total 
+# checking for row containing NA value in grimAge2_STD
+print(is.na(midus_data$grimage2_STD))
+
+midus_vars <- midus_data %>% 
+              select("income", "famcancer", "efficacy",
+                     "marital", "education", "grimage2_STD", "dunedinpace_STD",
+                     "cancerrisk_STD", "race_eth", "age", "sex",
+                     "smoking", "alcohol", "bmi") %>%
+  # Removing row with NA value for grimage2_STD
+  filter(
+    !is.na(grimage2_STD) #dropping missing value from grimage2
+  ) %>%
+  # Categorical variables should be coded as factors in order to invoke polyreg
+  mutate(
+      race_eth = factor(race_eth),
+      alcohol = factor(alcohol),
+      sex = factor(sex),
+      education = factor(education, ordered = TRUE),
+      smoking = factor(smoking),
+      marital = factor(marital),
+      famcancer = factor(famcancer)
+    )
 
 
+# confirming NA value has been removed
+print(is.na(midus_vars$grimage2_STD))
+
+# Run Little's MCAR
+mcar_test(midus_vars)
+# statistic df  p-value  missing.patterns
+# 212.3461	162	0.004844206	13	
+
+# Create a clean character vector tracking all variables in our target analysis subset
+analysis_variables <- names(midus_vars)
+
+md.pattern(midus_data) # Counting number of NA
+# Pattern summary: 1087 rows of 1156 that are complete. 
+
+md.pairs(midus_data) # Determining four missing patterns 
+# Looking at mr / rm values helps understand which values have overlapping data
+# to make them eligible for calculating imputations. 
+
+#missing summary function 
+missing_summary <- function(data, vars) {
+  data %>%
+    summarise(
+      across(
+        all_of(vars), #across all the given vars
+        ~ mean(is.na(.x)) * 100 # percentage of variables w/ missing values
+      )
+    ) %>% #create a data set w/ names - variable names, values - percent missing
+    pivot_longer(
+      cols = everything(),
+      names_to = "variable",
+      values_to = "percent_missing"
+    ) %>%
+  arrange(desc(percent_missing)) #arrange output in descending over 
+}
 
 
+missing_summary(midus_data, analysis_variables)
 
+#predictor matrix 
+pred <- mice(midus_vars, maxit = 0)$predictorMatrix 
+
+# Creating a methods object
+midus_methods <- make.method(midus_vars) 
+midus_methods # Looking to check method types for categorical vars
+
+# Assigning new methods to categorical variables
+midus_methods["education"] <- "polr" # changed this from "polyreg" as education is an ordered categorical variable
+#polyreg used for categorical values with 2+ categories
+midus_methods["famcancer"] <- "logreg" #logreg for nominal categorical values
+midus_methods["marital"] <- "polyreg"
+midus_methods # Checking to ensure variables are updated
+
+imp <- mice(
+  midus_vars, # data: what we want to impute
+  m = 10, # number of imputations to perform
+  seed = 0864,
+  printFlag = FALSE,
+  method = midus_methods
+)
+
+# Extract the first completed imputed dataset
+df_mice_completed <- complete(imp, action = 1)
+df_mice_completed
+
+
+# Re-run missing summary on the complete dataset to verify all missingness dropped to 0%
+missing_summary(df_mice_completed, analysis_variables)
 
 ```
 
 
 ```{r regression}
-m1_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + marital,
-                      data = midus_data,
-                      subset = (race_eth == "non-Hispanic Other"))
-m1_nonh_grim
 
-m2_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + education + income,
-                      data = midus_data,
-                      subset = (race_eth == "non-Hispanic Other"))
 
-m3_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + num_chron + famcancer,
-                      data = midus_data,
-                      subset = (race_eth == "non-Hispanic Other"))
-m4_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + efficacy_STD,
-                      data = midus_data,
-                      subset = (race_eth == "non-Hispanic Other"))
-m5_nonh_grim <- lm(grimage2_STD ~ cancerrisk_STD + smoking + alcohol,
-                      data = other_pop)
 
-#Table of results
-bind_rows(
-  tidy(m1_nonh_grim) %>% mutate(model = "Model 1 GrimAge2 STD"),
-  tidy(m2_nonh_grim) %>% mutate(model = "Model 2 GrimAge2 STD"),
-  tidy(m3_nonh_grim) %>% mutate(model = "Model 3 GrimAge2 STD"),
-  tidy(m4_nonh_grim) %>% mutate(model = "Model 4 GrimAge2 STD"),
-  tidy(m5_nonh_grim) %>% mutate(model = "Model 5 GrimAge2 STD")
-) %>%
-  filter(term != "(Intercept)") %>%
-  select(model, term, estimate, std.error, statistic, p.value) %>% #95% CI and p-val for grim and duned together and second beta coefficient
-  kable(caption = "GrimAge2 and Cancer Risk Regression Results for Non-Hispanic Other")
+#Regression Table
+
+m1_grim <- lm(grimage2_STD ~ cancerrisk_STD 
+                   + age + sex + race_eth + marital,
+                      data = df_mice_completed)
+
+m2_grim <- lm(grimage2_STD ~ cancerrisk_STD 
+                   + age + sex + race_eth + marital + education + income,
+                      data = df_mice_completed)
+
+m3_grim <- lm(grimage2_STD ~ cancerrisk_STD 
+                   + age + sex + race_eth + marital + education + income + famcancer,
+                      data = df_mice_completed)
+
+m4_grim <- lm(grimage2_STD ~ cancerrisk_STD 
+                   + age + sex + race_eth + marital + education + income + famcancer + efficacy,
+                      data = df_mice_completed)
+
+m5_grim <- lm(grimage2_STD ~ cancerrisk_STD 
+                   + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi,
+                      data = df_mice_completed)
+
+m6_grim <- lm(grimage2_STD ~ cancerrisk_STD * race_eth 
+                   + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi,
+                      data = df_mice_completed)
+m6_grim
+
 
 #regression of dunedinpace_STD
-m1_nonh_duned <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + marital,
-                      data = other_pop)
+m1_dune <- lm(dunedinpace_STD ~ cancerrisk_STD 
+                   + age + sex + race_eth + marital,
+                      data = df_mice_completed)
 
-m2_nonh_duned <- lm(grimage2_STD ~ dunedinpace_STD + education + income,
-                      data = other_pop)
+m2_dune <- lm(dunedinpace_STD ~ cancerrisk_STD 
+                   + age + sex + race_eth + marital + education + income,
+                      data = df_mice_completed)
 
-m3_nonh_duned <- lm(grimage2_STD ~ dunedinpace_STD + num_chron + famcancer,
-                      data = other_pop)
+m3_dune <- lm(dunedinpace_STD ~ cancerrisk_STD 
+                   + age + sex + race_eth + marital + education + income + famcancer,
+                      data = df_mice_completed)
 
-m4_nonh_duned <- lm(grimage2_STD ~ dunedinpace_STD + efficacy,
-                      data = other_pop)
+m4_dune <- lm(dunedinpace_STD ~ cancerrisk_STD 
+                   + age + sex + race_eth + marital + education + income + famcancer + efficacy,
+                      data = df_mice_completed)
 
-m5_nonh_duned <- lm(dunedinpace_STD ~ cancerrisk_STD + smoking + alcohol,
-                      data = other_pop)
+m5_dune <- lm(dunedinpace_STD ~ cancerrisk_STD 
+                   + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi,
+                      data = df_mice_completed)
 
-#Table of results
-bind_rows(
-  tidy(m1_nonh_duned) %>% mutate(model = "Model 1 DunedinPace STD"),
-  tidy(m2_nonh_duned) %>% mutate(model = "Model 2 DunedinPACE STD"),
-  tidy(m3_nonh_duned) %>% mutate(model = "Model 3 DunedinPACE STD"),
-  tidy(m4_nonh_duned) %>% mutate(model = "Model 4 DunedinPACE STD"),
-  tidy(m5_nonh_duned) %>% mutate(model = "Model 5 DunedinPACE STD")
-) %>%
-  filter(term != "(Intercept)") %>%
-  select(model, term, estimate, std.error, statistic, p.value) %>%
-  kable(caption = "DunedinPACE and Cancer Risk Regression Results for Non-Hispanic Other")
-              
+m6_dune <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth 
+                   + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi,
+                      data = df_mice_completed)
+m6_dune
+
+
+#Overall Models Data Frame:
+grim_models <- list("M1" = m1_grim, "M2" = m2_grim, "M3" = m3_grim, 
+                    "M4" = m4_grim, "M5" = m5_grim, "M6" = m6_grim)
+
+dune_models <- list("M1" = m1_dune, "M2" = m2_dune, "M3" = m3_dune, 
+                    "M4" = m4_dune, "M5" = m5_dune, "M6" = m6_dune)
+
+# ==============================================================================
+# 2. FIXED EXTRACTION FUNCTION (Captures main effect & interaction)
+# ==============================================================================
+format_with_broom <- function(model_list, outcome_label) {
+  model_list %>% 
+    map_dfr(~ broom::tidy(.x, conf.int = TRUE), .id = "Model") %>% 
+    # Pull BOTH your main effect and your Model 6 interaction term
+    filter(term %in% c("cancerrisk_STD", "cancerrisk_STD:race_eth")) %>% 
+    mutate(
+      Beta = sprintf("%.3f", estimate),
+      `95% CI` = paste0("[", sprintf("%.2f", conf.low), ", ", sprintf("%.2f", conf.high), "]"),
+      `p-value` = if_else(p.value < 0.001, "p <0.001", paste0("p = ", sprintf("%.3f", p.value)), missing = NA_character_),
+      Outcome = outcome_label,
+      
+      # Give your interaction row a clean, readable manuscript label
+      Predictor = case_match(
+        term,
+        "cancerrisk_STD" ~ "Perceived Cancer Risk (Std.)",
+        "cancerrisk_STD:race_eth" ~ "  × Race/Ethnicity Interaction",
+        .default = term
+      )
+    ) %>% 
+    # Create the beautiful vertical stack inside each cell
+    mutate(Cell_Content = paste(Beta, `95% CI`, `p-value`, sep = "\n")) %>% 
+    select(Outcome, Predictor, Model, Cell_Content)
+}
+
+# ==============================================================================
+# 3. BIND AND PIVOT HORIZONTALLY
+# ==============================================================================
+# ==============================================================================
+# 3. BIND AND PIVOT HORIZONTALLY
+# ==============================================================================
+manuscript_df <- bind_rows(
+  format_with_broom(grim_models, "GrimAge2 Acceleration"),
+  format_with_broom(dune_models, "DunedinPACE Pace of Aging")
+) %>% 
+  # Move M1 through M6 to the top headers
+  pivot_wider(names_from = Model, values_from = Cell_Content)
+
+# ==============================================================================
+# 4. CREATE THE MANUSCRIPT-QUALITY FLEXTABLE
+# ==============================================================================
+ft <- flextable(manuscript_df) %>% 
+  
+  # FIX: Apply the clean labels directly to the actual wide column names 
+  # that pivot_wider generated (Outcome, Predictor, M1, M2, etc.)
+  set_header_labels(
+    Outcome = "Biological Aging Clock",
+    Predictor = "Predictor Variable",
+    M1 = "Model 1",
+    M2 = "Model 2",
+    M3 = "Model 3",
+    M4 = "Model 4",
+    M5 = "Model 5",
+    M6 = "Model 6"
+  ) %>% 
+  
+  # Center align all model columns, left align descriptive texts
+  align(j = c("M1", "M2", "M3", "M4", "M5", "M6"), align = "center", part = "all") %>% 
+  align(j = c("Outcome", "Predictor"), align = "left", part = "all") %>% 
+  
+  # Merge duplicate clock text cells vertically
+  merge_v(j = "Outcome") %>%
+  valign(j = "Outcome", valign = "top") %>%
+  
+  # Apply professional academic typography (Times New Roman, 11pt)
+  font(fontname = "Times New Roman", part = "all") %>% 
+  fontsize(size = 11, part = "all") %>% 
+  bold(part = "header") %>% 
+  
+  # Clean up table borders (Strict APA Layout)
+  border_remove() %>% 
+  hline_top(border = fp_border(color = "black", width = 1.5), part = "header") %>% 
+  hline_bottom(border = fp_border(color = "black", width = 1.5), part = "header") %>% 
+  hline_bottom(border = fp_border(color = "black", width = 1.5), part = "body") %>% 
+  
+  # Since each clock has 2 rows now, the midpoint split is exactly at Row 2
+  hline(i = 2, border = fp_border(color = "gray", width = 0.5), part = "body") %>% 
+  
+  # Replace empty interaction cells in Models 1-5 with a clean dash
+  colformat_char(j = c("M1", "M2", "M3", "M4", "M5"), na_str = "—") %>%
+  
+  # Automatically wrap text to support vertical stacked layout strings
+  valign(valign = "top", part = "body") %>% 
+  autofit() %>% 
+  set_caption(caption = "Table 2. Multi-Model Regressions for Perceived Cancer Risk Predicting Epigenetic Age Acceleration.")
+ft
+
+# ==============================================================================
+# 5. EXPORT DIRECTLY TO WORD
+# ==============================================================================
+read_docx() %>% 
+  body_add_flextable(ft) %>% 
+  print(target = "manuscript_horizontal_table.docx")
 
 ```
