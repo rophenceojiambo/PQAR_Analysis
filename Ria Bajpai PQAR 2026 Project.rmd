@@ -796,6 +796,277 @@ m6_dunedinpace <- lm(
     data = df_mice_completed) %>%
 
 ```
+# Trying to include interaction terms within models 1-5
+```{r}
+# Calculating regression statistics for grimage2
+m1_grimage_2 <- lm(
+    grimage2_STD ~ 
+    cancerrisk_STD * race_eth 
+    + age 
+    + sex 
+    + marital,
+    data = df_mice_completed)
+
+# Calculating regression statistics for dunedinPACE
+m1_dunedin_pace <- lm(
+    dunedinpace_STD ~ 
+    cancerrisk_STD * race_eth
+    + age 
+    + sex 
+    + marital,
+    data = df_mice_completed)
+
+
+# GrimAge2 & DunedinPACE Models 2
+# Covariates: Perceived cancer risk + age + sex + race/ethnicity + 
+# marital status + education + income + family cancer history
+# Outcome: GrimAge2 & DunedinPACE Standardized Scores
+# Calculating regression statistics for GrimAge2
+m2_grimage_2 <- lm(
+    grimage2_STD ~ 
+    cancerrisk_STD * race_eth
+    + age 
+    + sex 
+    + marital
+    + education
+    + income,
+    data = df_mice_completed)
+# Calculating regression statistics for DunedinPACE
+m2_dunedin_pace <- lm(
+    dunedinpace_STD ~ 
+    cancerrisk_STD * race_eth
+    + age 
+    + sex 
+    + race_eth
+    + marital
+    + education
+    + income,
+    data = df_mice_completed)
+
+
+
+# GrimAge2 & DunedinPACE Model 3
+# Covariates: Perceived cancer risk + age + sex + race/ethnicity + 
+# marital status + education + income + family history of cancer
+# + self-efficacy for cancer prevention
+# Outcome: GrimAge2 & DunedinPACE Standardized Scores
+# Calculating regression statistics for GrimAge2
+m3_grimage_2 <- lm(
+    grimage2_STD ~ 
+    cancerrisk_STD * race_eth
+    + age 
+    + sex 
+    + marital
+    + education
+    + income
+    + famcancer,
+    data = df_mice_completed)
+
+# Calculating regression statistics for DunedinPACE
+m3_dunedin_pace <- lm(
+    dunedinpace_STD ~ 
+    cancerrisk_STD * race_eth
+    + age 
+    + sex 
+    + marital
+    + education
+    + income
+    + famcancer,
+    data = df_mice_completed)
+
+
+#GrimAge2 & DunedinPACE Models 4
+# Covariates: Perceived cancer risk + age + sex + race/ethnicity + 
+# marital status + education + income + family history of cancer
+# + self-efficacy for cancer prevention + smoking + alcohol use
+# Outcome: GrimAge2 & DunedinPACE Standardized Scores
+# Calculating regression statistics for GrimAge2
+m4_grimage_2 <- lm(
+    grimage2_STD ~ 
+    cancerrisk_STD * race_eth
+    + age 
+    + sex 
+    + marital
+    + education
+    + income
+    + famcancer
+    + efficacy,
+    data = df_mice_completed)
+
+# Calculating regression statistics for DunedinPACE
+m4_dunedin_pace <- lm(
+    dunedinpace_STD ~ 
+    cancerrisk_STD * race_eth
+    + age 
+    + sex 
+    + marital
+    + education
+    + income
+    + famcancer
+    + efficacy,
+    data = df_mice_completed)
+
+
+# GrimAge2 & DunedinPACE Models 5
+# Covariates: Perceived cancer risk + age + sex + race/ethnicity + 
+# marital status + education + income + self efficacy for cancer prevention
+# + family history of cancer + smoking + alcohol + BMI
+# Outcome: GrimAge2 & DunedinPACE Standardized Scores
+# Calculating regression statistics for GrimAge2
+m5_grimage_2 <- lm(
+    grimage2_STD ~ 
+    cancerrisk_STD * race_eth 
+    + age 
+    + sex 
+    + marital
+    + education
+    + income
+    + famcancer
+    + efficacy
+    + smoking
+    + alcohol
+    + bmi, 
+    data = df_mice_completed)
+
+# Calculating regression statistics for DunedinPACE
+m5_dunedin_pace <- lm(
+    dunedinpace_STD ~ 
+    cancerrisk_STD * race_eth
+    + age 
+    + sex 
+    + marital
+    + education
+    + income
+    + famcancer
+    + efficacy
+    + smoking
+    + alcohol
+    + bmi, 
+    data = df_mice_completed)
+
+
+# combining models for dunedin & grimage
+dunedin_models_interact <- list(
+  m1_dunedin_pace, m2_dunedin_pace, m3_dunedin_pace, 
+  m4_dunedin_pace, m5_dunedin_pace#, m6_dunedinpace
+)
+
+grimage_models_interact <- list(
+    m1_grimage_2, m2_grimage_2, m3_grimage_2, 
+  m4_grimage_2, m5_grimage_2#, m6_grimage2
+)
+
+# exporting models into doc
+
+# Create dataframe of empty row with model 6 interaction term subheading
+df_canc_interaction_1 <- data.frame(matrix(" ", nrow = 1, ncol = 6))
+#rownames(df_canc_interaction) <- c("Perceived Cancer Risk * race_eth")
+colnames(df_canc_interaction_1) <- c("part", "term", "model", "Est.", "({conf.low}, {conf.high})", "p")
+df_canc_interaction_1$term <- "Perceived cancer risk (std.) * race_eth"
+
+# Assigning model six subheader to specific row: 
+attr(df_canc_interaction_1, "position") <- 7
+
+# Grimage table in wide format
+grimage_wide_1 <- modelsummary(
+  models = grimage_models_interact, 
+  output = "data.frame",
+  fmt = 2,
+  shape = term + model ~ statistic, # Makes Beta and P-value horizontal columns
+  statistic = c("({conf.low}, {conf.high})", "p.value"),
+  stars = TRUE,
+  coef_map = c(
+    "cancerrisk_STD" = "Perceived cancer risk (std.)",
+    "cancerrisk_STD:race_ethnon-Hispanic Black" = "Perceived cancer risk (std.) * non-Hispanic Black",
+    "cancerrisk_STD:race_ethHispanic" = "Perceived cancer risk (std.) * Hispanic",
+    "cancerrisk_STD:race_ethnon-Hispanic Other" = "Perceived cancer risk (std.) * non-Hispanic Other"
+    ),
+  gof_omit = ".*",
+  add_rows = df_canc_interaction_1
+) %>% 
+  select(-part) %>%
+  rename(
+    GrimAge2_Beta = Est., 
+    `GrimAge2_CI` = `({conf.low}, {conf.high})`,
+    `GrimAge2_p-value` = p,
+  )
+
+
+# DunedinPACE table in wide format
+dunedin_wide_1 <- modelsummary(
+  models = dunedin_models_interact, 
+  output = "data.frame", 
+  fmt = 2,
+  shape = term + model ~ statistic, 
+  statistic = c("({conf.low}, {conf.high})", "p.value"),
+  stars = TRUE,
+  coef_map = c(
+    "cancerrisk_STD" = "Perceived cancer risk (std.)",
+    "cancerrisk_STD:race_ethnon-Hispanic Black" = "Perceived cancer risk (std.) * non-Hispanic Black",
+    "cancerrisk_STD:race_ethHispanic" = "Perceived cancer risk (std.) * Hispanic",
+    "cancerrisk_STD:race_ethnon-Hispanic Other" = "Perceived cancer risk (std.) * non-Hispanic Other"
+    ),
+  gof_omit = ".*",
+  add_rows = df_canc_interaction_1
+) %>% 
+  select(-part) %>%
+  rename(
+    DunedinPace_Beta = Est., 
+    `DunedinPACE_CI` = `({conf.low}, {conf.high})`,
+    `DunedinPace` = p,
+  )
+
+
+# Merging tables by the predictor name ("term") and model number
+final_table_data_1 <- left_join(grimage_wide_1, dunedin_wide_1, by = c("term", "model")) %>%
+  #Renaming model column
+  mutate(model = dplyr::replace_values(
+    model,
+    "(1)" ~ "1",
+    "(2)" ~ "2",
+    "(3)" ~ "3",
+    "(4)" ~ "4",
+    "(5)" ~ "5",
+    "(6)" ~ "6"
+  ))
+
+
+# 4. Build the Flextable
+ft <- flextable(final_table_data_1) %>%
+  set_caption(
+    caption = "Table 2: Adjusted associations between perceived cancer risk 
+              and epigenetic aging among MIDUS II sample"
+  ) %>%
+  # Adding group headers
+  add_header_row(
+    values = c("", "GrimAge2", "DunedinPACE"),
+    colwidths = c(2, 3, 3)
+  ) %>%
+  set_header_labels(
+    model = "Model",
+    term = "Characteristic",
+    GrimAge2_Beta = "Beta",
+    `GrimAge2_CI` = "95% CI",
+    `GrimAge2_p-value` = "p-value",
+    DunedinPace_Beta = "Beta",
+    `DunedinPACE_CI` = "95% CI",
+    `DunedinPace` = "p-value"
+  ) %>%
+  add_footer_lines(
+    values = "* p < 0.05, ** p < 0.01, *** p < 0.001"
+  ) %>%
+  # italicizing legend
+  italic(part = "footer")
+
+# Initialize a blank Word Document
+doc <- read_docx() %>%
+  body_add_flextable(ft) 
+  
+# Export file
+print(doc, target = "Output/ria_interaction_models.docx")
+```
+
+
 
 # Exporting models as table in word doc
 ```{r}
@@ -809,7 +1080,6 @@ grimage_models <- list(
   m1_grimage2, m2_grimage2, m3_grimage2, 
   m4_grimage2, m5_grimage2#, m6_grimage2
 )
-
 
 ```
 
