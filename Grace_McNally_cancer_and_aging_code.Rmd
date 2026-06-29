@@ -459,9 +459,103 @@ df_mice_completed
 missing_summary(df_mice_completed, analysis_variables)
 
 ```
+#regression analysis with interaction term in all models
+```{r}
 
+# =========================================================================
+# 1. REGRESSION MODELS (Overall Sample)
+# =========================================================================
+df_overall <- df_mice_completed
 
-#regression analysis
+# --- Outcome: GrimAge2 ---
+grim_ov_m1 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital, data = df_overall)
+grim_ov_m2 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income, data = df_overall)
+grim_ov_m3 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer, data = df_overall)
+grim_ov_m4 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy, data = df_overall)
+grim_ov_m5 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
+grim_ov_m6 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
+
+# --- Outcome: DunedinPACE ---
+pace_ov_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital, data = df_overall)
+pace_ov_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income, data = df_overall)
+pace_ov_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer, data = df_overall)
+pace_ov_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy, data = df_overall)
+pace_ov_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
+pace_ov_m6 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
+
+# Create two flat lists containing all 6 models
+grim_list <- list("M1"=grim_ov_m1, "M2"=grim_ov_m2, "M3"=grim_ov_m3, "M4"=grim_ov_m4, "M5"=grim_ov_m5, "M6"=grim_ov_m6)
+pace_list <- list("M1"=pace_ov_m1, "M2"=pace_ov_m2, "M3"=pace_ov_m3, "M4"=pace_ov_m4, "M5"=pace_ov_m5, "M6"=pace_ov_m6)
+
+# Variable mappings
+# Variable mappings (Updated to handle both R naming conventions)
+variables_to_show <- c(
+  # Main Effect
+  "cancerrisk_STD"                              = "Perceived Cancer Risk (Main Effect)",
+  
+  # Interaction terms (Continuous : Factor order)
+  "cancerrisk_STD:race_ethnon-Hispanic Black"   = "Perceived cancer risk * non-Hispanic Black",
+  "cancerrisk_STD:race_ethHispanic"             = "Perceived cancer risk * Hispanic",
+  "cancerrisk_STD:race_ethnon-Hispanic Other"   = "Perceived cancer risk * non-Hispanic Other",
+  
+  # Interaction terms (Factor : Continuous order backup)
+  "race_ethnon-Hispanic Black:cancerrisk_STD"   = "Perceived cancer risk * non-Hispanic Black",
+  "race_ethHispanic:cancerrisk_STD"             = "Perceived cancer risk * Hispanic",
+  "race_ethnon-Hispanic Other:cancerrisk_STD"   = "Perceived cancer risk * non-Hispanic Other"
+)
+
+# =========================================================================
+# 2. EXTRACT NATIVE DATA FRAMES FROM MODELSUMMARY
+# =========================================================================
+df_grim <- modelsummary(
+  grim_list, output = "data.frame", gof_omit = ".*", fmt = 2,
+  estimate = "{estimate}{stars}\n[{conf.low}, {conf.high}]", statistic = NULL,
+  coef_map = variables_to_show
+) %>%
+  mutate(`Outcome Metric` = "GrimAge2")
+
+df_pace <- modelsummary(
+  pace_list, output = "data.frame", gof_omit = ".*", fmt = 2,
+  estimate = "{estimate}{stars}\n[{conf.low}, {conf.high}]", statistic = NULL,
+  coef_map = variables_to_show
+) %>%
+  mutate(`Outcome Metric` = "DunedinPACE")
+
+# =========================================================================
+# 3. MERGE AND CLEAN ROW DATA SHAPES
+# =========================================================================
+final_df <- bind_rows(df_grim, df_pace) %>%
+  # Keep columns M1 through M6 intact
+  select(`Outcome Metric`, Predictor = term, M1, M2, M3, M4, M5, M6)
+
+# =========================================================================
+# 4. BUILD THE FINAL SEAMLESS FLEXTABLE
+# =========================================================================
+final_table <- flextable(final_df) %>%
+  merge_v(j = "Outcome Metric") %>% 
+  valign(j = "Outcome Metric", valign = "top") %>%
+  add_footer_lines("* p < 0.05, ** p < 0.01, *** p < 0.001.") %>%
+  set_table_properties(layout = "autofit", width = 1) %>%
+  set_caption(
+    caption = "Table 4: Overall models with standardized beta coefficients (and 95% confidence intervals) from a series of linear regression models quantifying the association between perceived cancer risk and epigenetic aging among MIDUS II sample"
+  )
+
+# =========================================================================
+# 5. EXPORT TO WORD
+# =========================================================================
+if(!dir.exists("Output")) dir.create("Output")
+
+save_as_docx(
+  final_table,
+  path = "Output/grace_overall_models.docx",
+  pr_section = prop_section(
+    page_size = page_size(orient = "landscape", width = 11.7, height = 8.3)
+  )
+)
+
+```
+
+#regression analysis with interaction term only model 6
 
 ```{r}
 # =========================================================================
@@ -470,18 +564,18 @@ missing_summary(df_mice_completed, analysis_variables)
 df_overall <- df_mice_completed
 
 # --- Outcome: GrimAge2 ---
-grim_ov_m1 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income, data = df_overall)
-grim_ov_m2 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer, data = df_overall)
-grim_ov_m3 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy, data = df_overall)
-grim_ov_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol, data = df_overall)
+grim_ov_m1 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital, data = df_overall)
+grim_ov_m2 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income, data = df_overall)
+grim_ov_m3 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer, data = df_overall)
+grim_ov_m4 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy, data = df_overall)
 grim_ov_m5 <- lm(grimage2_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
 grim_ov_m6 <- lm(grimage2_STD ~ age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi + (cancerrisk_STD * race_eth), data = df_overall)
 
 # --- Outcome: DunedinPACE ---
-pace_ov_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income, data = df_overall)
-pace_ov_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer, data = df_overall)
-pace_ov_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy, data = df_overall)
-pace_ov_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol, data = df_overall)
+pace_ov_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital, data = df_overall)
+pace_ov_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income, data = df_overall)
+pace_ov_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer, data = df_overall)
+pace_ov_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy, data = df_overall)
 pace_ov_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
 pace_ov_m6 <- lm(dunedinpace_STD ~ age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi + (cancerrisk_STD * race_eth), data = df_overall)
 
@@ -502,14 +596,14 @@ variables_to_show <- c(
 # =========================================================================
 # By using output = "data.frame", we escape the list processing errors entirely
 df_grim <- modelsummary(
-  grim_list, output = "data.frame", gof_omit = ".*", fmt = 3,
+  grim_list, output = "data.frame", gof_omit = ".*", fmt = 2,
   estimate = "{estimate}{stars}\n[{conf.low}, {conf.high}]", statistic = NULL,
   coef_map = variables_to_show
 ) %>%
   mutate(`Outcome Metric` = "GrimAge2")
 
 df_pace <- modelsummary(
-  pace_list, output = "data.frame", gof_omit = ".*", fmt = 3,
+  pace_list, output = "data.frame", gof_omit = ".*", fmt = 2,
   estimate = "{estimate}{stars}\n[{conf.low}, {conf.high}]", statistic = NULL,
   coef_map = variables_to_show
 ) %>%
@@ -545,7 +639,7 @@ if(!dir.exists("Output")) dir.create("Output")
 
 save_as_docx(
   final_table,
-  path = "Output/grace_overall_models.docx",
+  path = "Output/grace_overall_models2.docx",
   pr_section = prop_section(
     page_size = page_size(orient = "landscape", width = 11.7, height = 8.3)
   )
@@ -553,7 +647,7 @@ save_as_docx(
 
 ```
 
-#overall/supplemental tabletables 
+#overall/supplemental table Dunedin PACE
 ```{r}
 #baseline summary simplest model 
 modelsummary(grim_list)
@@ -596,13 +690,14 @@ raw_table <- modelsummary(
   output = "gt",
   estimate = "{estimate} ({conf.low} to {conf.high})", # Formats as Beta (95% CI)
   statistic = NULL,                                    # Removes standard errors row
+  fmt = 2,
   coef_map = coef_map,
   gof_map = NA,                                        # Removes R2, AIC, etc. from bottom
   title = "Supplemental Table. Adjusted associations between perceived cancer risk and DunedinPACE among 1,155 participants from the Midlife in the United States Study."
 )
 
 # 2. Corrected gt code (removes the broken tab_cols_merge function)
-final_table <- raw_table %>%
+final_table_dune <- raw_table %>%
   cols_label(
     "M1" = html("Model 1<br><small>Beta (95% CI)</small>"),
     "M2" = html("Model 2<br><small>Beta (95% CI)</small>"),
@@ -632,13 +727,116 @@ final_table <- raw_table %>%
   )
 
 # Display the fixed table
-final_table
+final_table_dune
+
+# =========================================================================
+# EXPORT GT TABLE DIRECTLY TO WORD 
+# =========================================================================
+# Ensure the output folder exists before exporting
+if(!dir.exists("Output")) dir.create("Output")
+
+# Save the gt table directly as a .docx file
+gtsave(
+  data = final_table_dune,
+  filename = "grace_all_associations_dunedinpace.docx",
+  path = "Output"
+)
+
 
 ```
 
 
+#overall/supplemental table for grimage2
 
+```{r}
 
+# =========================================================================
+# PUBLICATION READY SUPPLEMENTAL TABLE: GrimAge2
+# =========================================================================
 
+# Complete Coefficient Map for all explicit dummy levels generated by R
+coef_map <- c(
+  "cancerrisk_STD"                            = "Perceived cancer risk (z-score)",
+  "age"                                       = "Age",
+  "sexFemale"                                 = "Female",
+  "race_ethnon-Hispanic Black"                = "non-Hispanic Black",
+  "race_ethHispanic"                          = "Hispanic",
+  "race_ethnon-Hispanic Other"                = "non-Hispanic Other",
+  "maritalDivorced/Separated/Widowed"         = "Divorced/Separated/Widowed",
+  "maritalNever married"                      = "Never married",
+  "educationsome college/associate's degree"  = "Some college/associate's degree",
+  "educationcollege degree or higher"         = "College degree or higher",
+  "income"                                    = "Annual household income",
+  "famcancerYes"                              = "Yes",
+  "efficacy"                                  = "Self-efficacy for cancer prevention",
+  "smokingPast"                               = "Past",
+  "smokingCurrent"                            = "Current",
+  "alcohol<1 day a week"                      = "<1 day a week",
+  "alcohol1-2 days a week"                    = "1-2 days a week",
+  "alcohol3+ days a week"                     = "3+ days a week",
+  "bmi"                                       = "Body mass index (kg/m²)",
+  "cancerrisk_STD:race_ethnon-Hispanic Black" = "Perceived cancer risk (z-score) * non-Hispanic Black",
+  "cancerrisk_STD:race_ethHispanic"           = "Perceived cancer risk (z-score) * Hispanic",
+  "cancerrisk_STD:race_ethnon-Hispanic Other" = "Perceived cancer risk (z-score) * non-Hispanic Other"
+)
+
+# 1. Generate the base table with modelsummary for GrimAge2
+raw_table_grim <- modelsummary(
+  grim_list,
+  output = "gt",
+  estimate = "{estimate} ({conf.low} to {conf.high})", # Formats as Beta (95% CI)
+  statistic = NULL,                                    # Removes standard errors row
+  fmt = 2,
+  coef_map = coef_map,
+  gof_map = NA,                                        # Removes R2, AIC, etc. from bottom
+  title = "Supplemental Table. Adjusted associations between perceived cancer risk and GrimAge2 among 1,155 participants from the Midlife in the United States Study."
+)
+
+# 2. Format the gt table object for professional publication
+final_table_grim <- raw_table_grim %>%
+  cols_label(
+    "M1" = html("Model 1<br><small>Beta (95% CI)</small>"),
+    "M2" = html("Model 2<br><small>Beta (95% CI)</small>"),
+    "M3" = html("Model 3<br><small>Beta (95% CI)</small>"),
+    "M4" = html("Model 4<br><small>Beta (95% CI)</small>"),
+    "M5" = html("Model 5<br><small>Beta (95% CI)</small>"),
+    "M6" = html("Model 6<br><small>Beta (95% CI)</small>")
+  ) %>%
+  # Align text left for labels, center for numbers
+  cols_align(align = "left", columns = 1) %>%
+  cols_align(align = "center", columns = 2:7) %>%
+  # Add footnotes/abbreviations at the bottom
+  tab_source_note(source_note = "Abbreviation: CI = Confidence interval. Results were pooled across ten imputed datasets.") %>%
+  # Apply clean APA/Journal style styling
+  tab_options(
+    table.border.top.color = "black",
+    table.border.top.width = px(2),
+    table.border.bottom.color = "black",
+    table.border.bottom.width = px(2),
+    column_labels.border.bottom.color = "black",
+    column_labels.border.bottom.width = px(1.5),
+    table_body.border.bottom.color = "black",
+    table_body.border.bottom.width = px(1.5),
+    heading.title.font.weight = "bold",
+    heading.title.font.size = pct(110)
+  )
+
+# Display the fixed GrimAge2 table
+final_table_grim
+
+# =========================================================================
+# EXPORT GT TABLE DIRECTLY TO WORD 
+# =========================================================================
+# Ensure the output folder exists before exporting
+if(!dir.exists("Output")) dir.create("Output")
+
+# Save the gt table directly as a .docx file
+gtsave(
+  data = final_table_grim,
+  filename = "grace_all_associations_grimage.docx",
+  path = "Output"
+)
+
+```
 
 
