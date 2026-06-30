@@ -534,7 +534,7 @@ final_df <- bind_rows(df_grim, df_pace) %>%
 final_table <- flextable(final_df) %>%
   merge_v(j = "Outcome Metric") %>% 
   valign(j = "Outcome Metric", valign = "top") %>%
-  add_footer_lines("* p < 0.05, ** p < 0.01, *** p < 0.001.") %>%
+  add_footer_lines("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001.") %>%
   set_table_properties(layout = "autofit", width = 1) %>%
   set_caption(
     caption = "Table 4: Overall models with standardized beta coefficients (and 95% confidence intervals) from a series of linear regression models quantifying the association between perceived cancer risk and epigenetic aging among MIDUS II sample"
