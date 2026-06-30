@@ -243,7 +243,7 @@ tbl_summary(by = race_eth,
   ) %>%
   add_stat_label() %>%
   bold_labels() %>%
-  modify_caption("Table 3: Descriptive Statistics Overall and Stratified by Race and Ethnicity")
+  modify_caption("Table 2: Descriptive Statistics Overall and Stratified by Race and Ethnicity")
 
 table3
 
@@ -251,7 +251,7 @@ table3 %>%
   as_flex_table() %>%
   set_table_properties(layout = "autofit", width = 1) %>%
   save_as_docx(
-    path = "Output/Table 2 Descriptive Overall and by Race and Ethnicity.docx",
+    path = "Output/Table 3 Descriptive Overall and by Race and Ethnicity.docx",
     pr_section = prop_section(
       page_size = page_size(orient = "landscape", width = 11.7, height = 8.3))
       )
