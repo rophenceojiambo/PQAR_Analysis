@@ -448,6 +448,101 @@ df_mice_completed
 missing_summary(df_mice_completed, analysis_variables)
 
 ```
+#regression analysis with interaction term in all models
+```{r}
+
+# =========================================================================
+# 1. REGRESSION MODELS (Overall Sample)
+# =========================================================================
+df_overall <- df_mice_completed
+
+# --- Outcome: GrimAge2 ---
+grim_ov_m1 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital, data = df_overall)
+grim_ov_m2 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income, data = df_overall)
+grim_ov_m3 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer, data = df_overall)
+grim_ov_m4 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy, data = df_overall)
+grim_ov_m5 <- lm(grimage2_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
+
+
+# --- Outcome: DunedinPACE ---
+pace_ov_m1 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital, data = df_overall)
+pace_ov_m2 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income, data = df_overall)
+pace_ov_m3 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer, data = df_overall)
+pace_ov_m4 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy, data = df_overall)
+pace_ov_m5 <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi, data = df_overall)
+
+
+# Create two flat lists containing all 6 models
+grim_list <- list("M1"=grim_ov_m1, "M2"=grim_ov_m2, "M3"=grim_ov_m3, "M4"=grim_ov_m4, "M5"=grim_ov_m5)
+pace_list <- list("M1"=pace_ov_m1, "M2"=pace_ov_m2, "M3"=pace_ov_m3, "M4"=pace_ov_m4, "M5"=pace_ov_m5)
+
+# Variable mappings
+# Variable mappings (Updated to handle both R naming conventions)
+variables_to_show <- c(
+  # Main Effect
+  "cancerrisk_STD"                              = "Perceived Cancer Risk (Main Effect)",
+  
+  # Interaction terms (Continuous : Factor order)
+  "cancerrisk_STD:race_ethnon-Hispanic Black"   = "Perceived cancer risk * non-Hispanic Black",
+  "cancerrisk_STD:race_ethHispanic"             = "Perceived cancer risk * Hispanic",
+  "cancerrisk_STD:race_ethnon-Hispanic Other"   = "Perceived cancer risk * non-Hispanic Other",
+  
+  # Interaction terms (Factor : Continuous order backup)
+  "race_ethnon-Hispanic Black:cancerrisk_STD"   = "Perceived cancer risk * non-Hispanic Black",
+  "race_ethHispanic:cancerrisk_STD"             = "Perceived cancer risk * Hispanic",
+  "race_ethnon-Hispanic Other:cancerrisk_STD"   = "Perceived cancer risk * non-Hispanic Other"
+)
+
+# =========================================================================
+# 2. EXTRACT NATIVE DATA FRAMES FROM MODELSUMMARY
+# =========================================================================
+df_grim <- modelsummary(
+  grim_list, output = "data.frame", gof_omit = ".*", fmt = 2,
+  estimate = "{estimate}{stars}\n[{conf.low}, {conf.high}]", statistic = NULL,
+  coef_map = variables_to_show
+) %>%
+  mutate(`Outcome Metric` = "GrimAge2")
+
+df_pace <- modelsummary(
+  pace_list, output = "data.frame", gof_omit = ".*", fmt = 2,
+  estimate = "{estimate}{stars}\n[{conf.low}, {conf.high}]", statistic = NULL,
+  coef_map = variables_to_show
+) %>%
+  mutate(`Outcome Metric` = "DunedinPACE")
+
+# =========================================================================
+# 3. MERGE AND CLEAN ROW DATA SHAPES
+# =========================================================================
+final_df <- bind_rows(df_grim, df_pace) %>%
+  # Keep columns M1 through M6 intact
+  select(`Outcome Metric`, Predictor = term, M1, M2, M3, M4, M5)
+
+# =========================================================================
+# 4. BUILD THE FINAL SEAMLESS FLEXTABLE
+# =========================================================================
+final_table <- flextable(final_df) %>%
+  merge_v(j = "Outcome Metric") %>% 
+  valign(j = "Outcome Metric", valign = "top") %>%
+  add_footer_lines("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001.") %>%
+  set_table_properties(layout = "autofit", width = 1) %>%
+  set_caption(
+    caption = "Table 4: Overall models with standardized beta coefficients (and 95% confidence intervals) from a series of linear regression models quantifying the association between perceived cancer risk and epigenetic aging among MIDUS II sample"
+  )
+
+# =========================================================================
+# 5. EXPORT TO WORD
+# =========================================================================
+if(!dir.exists("Output")) dir.create("Output")
+
+save_as_docx(
+  final_table,
+  path = "Output/Table 5 Regression Models.docx",
+  pr_section = prop_section(
+    page_size = page_size(orient = "landscape", width = 11.7, height = 8.3)
+  )
+)
+
+```
 
 
 
