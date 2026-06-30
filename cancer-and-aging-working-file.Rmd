@@ -334,7 +334,7 @@ ft <- flextable(final_df) %>%
   align(j = 1, align = "left", part = "all") %>% 
   align(j = 2:ncol(final_df), align = "center", part = "all") %>%
   # Add a table title
-  add_header_lines("1.1. Table 3. Zero-order correlations among epigenetic aging measures, perceived cancer risk, age, self-efficacy, and chronic conditions.") %>%
+  set_caption("Table 3. Zero-order correlations among epigenetic aging measures, perceived cancer risk, age, self-efficacy, and chronic conditions.") %>%
   #footer with stars info
   add_footer_lines("* p < 0.05, ** p < 0.01, *** p < 0.001") %>%
   font(fontname = "Arial", part = "all")
@@ -342,7 +342,7 @@ ft <- flextable(final_df) %>%
 ft
 
 #export
-save_as_docx(ft, path = "Output/Table_4_Correlation_Matrix.docx")
+save_as_docx(ft, path = "Output/Table 4 Correlation Matrix.docx")
 ```
 
 # Multiple Imputation
@@ -513,7 +513,8 @@ df_pace <- modelsummary(
 # =========================================================================
 # 3. MERGE AND CLEAN ROW DATA SHAPES
 # =========================================================================
-final_df <- bind_rows(df_grim, df_pace) %>%
+final_df <- bind_rows(df_grim, df_pace) %>% 
+
   # Keep columns M1 through M6 intact
   select(`Outcome Metric`, Predictor = term, M1, M2, M3, M4, M5)
 
@@ -523,12 +524,15 @@ final_df <- bind_rows(df_grim, df_pace) %>%
 final_table <- flextable(final_df) %>%
   merge_v(j = "Outcome Metric") %>% 
   valign(j = "Outcome Metric", valign = "top") %>%
+  # --- Bold Layout Modifications ---
+  bold(part = "header") %>%                     # Bolds 'Outcome Metric', 'Predictor', and 'M1-M5'
+  bold(j = "Outcome Metric", part = "body") %>%  # Bolds 'GrimAge2' and 'DunedinPACE' row labels
   add_footer_lines("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001.") %>%
   set_table_properties(layout = "autofit", width = 1) %>%
   set_caption(
     caption = "Table 4: Overall models with standardized beta coefficients (and 95% confidence intervals) from a series of linear regression models quantifying the association between perceived cancer risk and epigenetic aging among MIDUS II sample"
-  )
-
+  ) 
+  
 # =========================================================================
 # 5. EXPORT TO WORD
 # =========================================================================
