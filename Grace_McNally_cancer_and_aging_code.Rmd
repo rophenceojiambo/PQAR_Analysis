@@ -23,6 +23,7 @@ Week 1 Tasks:
 
 ```{r}
 # Load needed packages
+
 library(gtsummary)
 library(flextable)
 library(broom)
@@ -40,6 +41,10 @@ library(Hmisc)
 library(modelsummary)
 library(naniar) #mcar test
 # theme for tables
+library(ggeffects) #for making plots
+library(ggplot2)
+library(patchwork)
+library(patchwork) #for ordering figures in rows and columns
 theme_gtsummary_journal(journal = "jama")
 ```
 
@@ -841,4 +846,211 @@ gtsave(
 
 ```
 
+
+# model 4 figure
+```{r} 
+#install.packages("ggeffects")
+#install.packages("patchwork") 
+
+# =========================================================================
+# 1. GENERATE MARGINAL PREDICTIONS FOR MODEL 4
+# =========================================================================
+# Re-extracting from M4 directly inside your named list objects
+
+pred_grim <- predict_response(
+  grim_list$M4, 
+  terms = c("cancerrisk_STD [-2,-1,0,1,2]", "race_eth")
+)
+
+pred_pace <- predict_response(
+  pace_list$M4, 
+  terms = c("cancerrisk_STD [-2,-1,0,1,2]", "race_eth")
+)
+
+# Convert to data frames for custom ggplot handling
+df_plot_grim <- as.data.frame(pred_grim)
+df_plot_pace <- as.data.frame(pred_pace)
+
+# Define matching professional palette from your example figure
+color_palette <- c(
+  "non-Hispanic Black" = "#377eb8",  # Clean Blue
+  "non-Hispanic Other" = "#ff7f00",  # Sharp Orange
+  "Hispanic"           = "#4daf4a",  # Muted Green
+  "non-Hispanic White" = "#e41a1c"   # Red
+)
+
+# =========================================================================
+# 2. PLOT A: GrimAge2 (Model 4 predictions)
+# =========================================================================
+plot_a <- ggplot(df_plot_grim, aes(x = x, y = predicted, color = group, group = group)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  scale_color_manual(values = color_palette) +
+  scale_x_continuous(breaks = -2:2, labels = c("-2", "-1", "0", "1", "2")) + #breaks adds ticks 
+  scale_y_continuous(limits = c(-0.8, 0.8), breaks = seq(-0.5, 0.5, 0.5), labels = c("-0.5", "0.0", "+0.5")) +
+  labs(
+    title = "(A)",
+    x = "Perceived Cancer Risk (z-score)",
+    y = "Predicted GrimAge2 (z-score)"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 15),
+    legend.position = "none" # Hidden on left plot; managed globally by patchwork
+  )
+
+#dunedin pace plot for model 4 
+plot_b <- ggplot(df_plot_pace, aes(
+  x = x, 
+  y = predicted, 
+  color = group, 
+  group = group
+)) + geom_line(linewidth = 1.2) + 
+  geom_point(size = 3) + 
+  scale_color_manual(values = color_palette) + 
+  scale_x_continuous(breaks = -2:2, labels = c("-2", "-1", "0", "1", "2")) + #breaks adds ticks 
+  scale_y_continuous(limits = c(-0.8, 0.8), breaks = seq(-0.5, 0.5, 0.5), labels = c("-0.5", "0.0", "+0.5")) +
+  labs(
+    title = "(B)",
+    x = "Perceived Cancer Risk (z-score)",
+    y = "Predicted DunedinPACE (z-score)"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 15),
+    legend.position = "right" 
+    # Hidden on left plot; managed globally by patchwork
+  )
+
+
+wrapped_title <- str_wrap(
+  "Association Between Perceived Cancer Risk and Biological Aging Metrics Stratified by Race/Ethnicity", 
+  width = 60 # Restricts lines to ~60 characters max
+)
+
+# 2. Combine your plots
+model_4_figure <- (plot_a + plot_b) + 
+  plot_layout(ncol = 2, guides = "collect") +
+  plot_annotation(
+    title = wrapped_title, 
+    theme = theme(
+      plot.title = element_text(
+        face = "bold", 
+        size = 14,          # Slightly smaller font scales better across dual plots
+        hjust = 0.5,        # Centers the text
+        lineheight = 1.2,   # Adds breathing room between the title lines
+        margin = margin(t = 15, b = 15) # Stronger top/bottom padding
+      )
+    )
+  ) & 
+  theme(
+    legend.position = "bottom",                          
+    legend.title = element_text(face = "bold", size = 11) 
+  ) +
+  labs(color = "Race / Ethnicity")
+# Display the plot
+model_4_figure
+
+
+#exporting t workd 
+ggsave(
+  filename = "Output/grace-figure_1_m4.png", 
+  plot = model_4_figure, 
+  device = "png", 
+  dpi = 300,            # 300 DPI is standard print/publication quality
+  width = 7.5, 
+  height = 4.5, 
+  units = "in",
+  bg = "white"          # Ensures background doesn't default to transparent
+)
+
+```
+
+#model 5 figure 
+
+```{r} 
+#model 5 - health behaviors adjusted 
+
+pred_grim <- predict_response(
+  grim_list$M5, 
+  terms = c("cancerrisk_STD [-2,-1,0,1,2]", "race_eth")
+)
+
+pred_pace <- predict_response(
+  pace_list$M5, 
+  terms = c("cancerrisk_STD [-2,-1,0,1,2]", "race_eth")
+)
+
+# Convert to data frames for custom ggplot handling
+df_plot_grim <- as.data.frame(pred_grim)
+df_plot_pace <- as.data.frame(pred_pace)
+
+# Define matching professional palette from your example figure
+color_palette <- c(
+  "non-Hispanic Black" = "#377eb8",  # Clean Blue
+  "non-Hispanic Other" = "#ff7f00",  # Sharp Orange
+  "Hispanic"           = "#4daf4a",  # Muted Green
+  "non-Hispanic White" = "#e41a1c"   # Red
+)
+
+# =========================================================================
+# 2. PLOT A: GrimAge2 (Model 4 predictions)
+# =========================================================================
+plot_c <- ggplot(df_plot_grim, aes(x = x, y = predicted, color = group, group = group)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  scale_color_manual(values = color_palette) +
+  scale_x_continuous(breaks = -2:2, labels = c("-2", "-1", "0", "1", "2")) + #breaks adds ticks 
+  scale_y_continuous(limits = c(-0.8, 0.8), breaks = seq(-0.5, 0.5, 0.5), labels = c("-0.5", "0.0", "+0.5")) +
+  labs(
+    title = "(C)",
+    x = "Perceived Cancer Risk (z-score)",
+    y = "Predicted GrimAge2 (z-score)"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 15),
+    legend.position = "none" # Hidden on left plot; managed globally by patchwork
+  )
+
+#dunedin pace plot for model 4 
+plot_d <- ggplot(df_plot_pace, aes(
+  x = x, 
+  y = predicted, 
+  color = group, 
+  group = group
+)) + geom_line(linewidth = 1.2) + 
+  geom_point(size = 3) + 
+  scale_color_manual(values = color_palette) + 
+  scale_x_continuous(breaks = -2:2, labels = c("-2", "-1", "0", "1", "2")) + #breaks adds ticks 
+  scale_y_continuous(limits = c(-0.8, 0.8), breaks = seq(-0.5, 0.5, 0.5), labels = c("-0.5", "0.0", "+0.5")) +
+  labs(
+    title = "(D)",
+    x = "Perceived Cancer Risk (z-score)",
+    y = "Predicted DunedinPACE (z-score)"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 15),
+    legend.position = "right" 
+    # Hidden on left plot; managed globally by patchwork
+  )
+
+
+# Combine plots side-by-side with a shared legend on the right
+model_5_figure <- plot_c + plot_d + 
+  plot_layout(ncol = 2, guides = "collect") & 
+  theme(
+    legend.position = "bottom",        # Moves legend to the right side
+    legend.title = element_text(face = "bold", size = 11) # bolds the title
+  ) +
+  labs(color = "Race / Ethnicity")    # Changes the legend title text
+
+# Display the plot
+model_5_figure
+```
 
