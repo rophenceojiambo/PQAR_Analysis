@@ -887,7 +887,7 @@ plot_a <- ggplot(df_plot_grim, aes(x = x, y = predicted, color = group, group = 
   geom_point(size = 3) +
   scale_color_manual(values = color_palette) +
   scale_x_continuous(breaks = -2:2, labels = c("-2", "-1", "0", "1", "2")) + #breaks adds ticks 
-  scale_y_continuous(limits = c(-0.8, 0.8), breaks = seq(-0.5, 0.5, 0.5), labels = c("-0.5", "0.0", "+0.5")) +
+  scale_y_continuous(limits = c(-1.8, 1.8), breaks = seq(-1.5, 1.5, 0.5), labels = c("-1.5", "1.0","0.5", "0.0", "+0.5", "+1.0", "+1.5")) +
   labs(
     title = "(A)",
     x = "Perceived Cancer Risk (z-score)",
@@ -910,7 +910,7 @@ plot_b <- ggplot(df_plot_pace, aes(
   geom_point(size = 3) + 
   scale_color_manual(values = color_palette) + 
   scale_x_continuous(breaks = -2:2, labels = c("-2", "-1", "0", "1", "2")) + #breaks adds ticks 
-  scale_y_continuous(limits = c(-0.8, 0.8), breaks = seq(-0.5, 0.5, 0.5), labels = c("-0.5", "0.0", "+0.5")) +
+  scale_y_continuous(limits = c(-1.8, 1.8), breaks = seq(-1.5, 1.5, 0.5), labels = c("-1.5", "-1.0", "-0.5", "0.0", "+0.5", "+1.0", "+1.5")) +
   labs(
     title = "(B)",
     x = "Perceived Cancer Risk (z-score)",
@@ -926,7 +926,7 @@ plot_b <- ggplot(df_plot_pace, aes(
 
 
 wrapped_title <- str_wrap(
-  "Association Between Perceived Cancer Risk and Biological Aging Metrics Stratified by Race/Ethnicity", 
+  "Association Between Perceived Cancer Risk and Biological Aging Metrics with Regression Model 4", 
   width = 60 # Restricts lines to ~60 characters max
 )
 
@@ -1041,16 +1041,49 @@ plot_d <- ggplot(df_plot_pace, aes(
   )
 
 
-# Combine plots side-by-side with a shared legend on the right
-model_5_figure <- plot_c + plot_d + 
-  plot_layout(ncol = 2, guides = "collect") & 
-  theme(
-    legend.position = "bottom",        # Moves legend to the right side
-    legend.title = element_text(face = "bold", size = 11) # bolds the title
-  ) +
-  labs(color = "Race / Ethnicity")    # Changes the legend title text
-
 # Display the plot
 model_5_figure
+
+
+wrapped_title <- str_wrap(
+  "Association Between Perceived Cancer Risk and Biological Aging Metrics with Regression Model 5", 
+  width = 60 # Restricts lines to ~60 characters max
+)
+
+# 2. Combine your plots
+model_5_figure <- (plot_c + plot_d) + 
+  plot_layout(ncol = 2, guides = "collect") +
+  plot_annotation(
+    title = wrapped_title, 
+    theme = theme(
+      plot.title = element_text(
+        face = "bold", 
+        size = 14,          # Slightly smaller font scales better across dual plots
+        hjust = 0.5,        # Centers the text
+        lineheight = 1.2,   # Adds breathing room between the title lines
+        margin = margin(t = 15, b = 15) # Stronger top/bottom padding
+      )
+    )
+  ) & 
+  theme(
+    legend.position = "bottom",                          
+    legend.title = element_text(face = "bold", size = 11) 
+  ) +
+  labs(color = "Race / Ethnicity")
+# Display the plot
+model_5_figure
+
+
+#exporting t workd 
+ggsave(
+  filename = "Output/grace-figure_2_m5.png", 
+  plot = model_5_figure, 
+  device = "png", 
+  dpi = 300,            # 300 DPI is standard print/publication quality
+  width = 7.5, 
+  height = 4.5, 
+  units = "in",
+  bg = "white"          # Ensures background doesn't default to transparent
+)
 ```
 
