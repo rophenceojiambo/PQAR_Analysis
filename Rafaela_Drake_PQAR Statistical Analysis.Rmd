@@ -273,10 +273,9 @@ missing_summary(df_mice_completed, analysis_variables)
 
 ```{r regression}
 
-
-
 #Regression Table
 
+#grimage2 regressions
 m1_grim <- lm(grimage2_STD ~ cancerrisk_STD 
                    + age + sex + race_eth + marital,
                       data = df_mice_completed)
@@ -296,7 +295,7 @@ m4_grim <- lm(grimage2_STD ~ cancerrisk_STD
 m5_grim <- lm(grimage2_STD ~ cancerrisk_STD 
                    + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi,
                       data = df_mice_completed)
-
+#race_eth interaction
 m6_grim <- lm(grimage2_STD ~ cancerrisk_STD * race_eth 
                    + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi,
                       data = df_mice_completed)
@@ -323,7 +322,7 @@ m4_dune <- lm(dunedinpace_STD ~ cancerrisk_STD
 m5_dune <- lm(dunedinpace_STD ~ cancerrisk_STD 
                    + age + sex + race_eth + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi,
                       data = df_mice_completed)
-
+#race_eth interaction
 m6_dune <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth 
                    + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi,
                       data = df_mice_completed)
@@ -337,100 +336,293 @@ grim_models <- list("M1" = m1_grim, "M2" = m2_grim, "M3" = m3_grim,
 dune_models <- list("M1" = m1_dune, "M2" = m2_dune, "M3" = m3_dune, 
                     "M4" = m4_dune, "M5" = m5_dune, "M6" = m6_dune)
 
-# ==============================================================================
-# 2. FIXED EXTRACTION FUNCTION (Captures main effect & interaction)
-# ==============================================================================
 format_with_broom <- function(model_list, outcome_label) {
-  model_list %>% 
-    map_dfr(~ broom::tidy(.x, conf.int = TRUE), .id = "Model") %>% 
-    # Pull BOTH your main effect and your Model 6 interaction term
-    filter(term %in% c("cancerrisk_STD", "cancerrisk_STD:race_eth")) %>% 
+  
+  #terms for interaction
+  interaction_terms <- c(
+    "cancerrisk_STD:race_ethnon-Hispanic Black",
+    "cancerrisk_STD:race_ethHispanic",
+    "cancerrisk_STD:race_ethnon-Hispanic Other"
+  )
+  
+  model_list %>%
+    map_dfr(~ broom::tidy(.x, conf.int = TRUE), .id = "Model") %>%
+    filter(term %in% c("cancerrisk_STD", interaction_terms)) %>%
     mutate(
-      Beta = sprintf("%.3f", estimate),
-      `95% CI` = paste0("[", sprintf("%.2f", conf.low), ", ", sprintf("%.2f", conf.high), "]"),
-      `p-value` = if_else(p.value < 0.001, "p <0.001", paste0("p = ", sprintf("%.3f", p.value)), missing = NA_character_),
-      Outcome = outcome_label,
-      
-      # Give your interaction row a clean, readable manuscript label
+      Beta    = sprintf("%.3f", estimate),
+      CI      = paste0("[", sprintf("%.2f", conf.low), ", ", sprintf("%.2f", conf.high), "]"),
+      pval    = if_else(p.value < 0.001, "p <0.001",
+                        paste0("p = ", sprintf("%.3f", p.value)),
+                        missing = NA_character_),
+      Outcome   = outcome_label,
       Predictor = case_match(
         term,
-        "cancerrisk_STD" ~ "Perceived Cancer Risk (Std.)",
-        "cancerrisk_STD:race_eth" ~ "  × Race/Ethnicity Interaction",
+        "cancerrisk_STD"                              ~ "Perceived Cancer Risk (Std.)",
+        "cancerrisk_STD:race_ethnon-Hispanic Black"   ~ "  × Non-Hispanic Black",
+        "cancerrisk_STD:race_ethHispanic"             ~ "  × Hispanic",
+        "cancerrisk_STD:race_ethnon-Hispanic Other"   ~ "  × Non-Hispanic Other",
         .default = term
-      )
-    ) %>% 
-    # Create the beautiful vertical stack inside each cell
-    mutate(Cell_Content = paste(Beta, `95% CI`, `p-value`, sep = "\n")) %>% 
+      ),
+      # Stack β, CI, p vertically inside each cell
+      Cell_Content = paste(Beta, CI, pval, sep = "\n")
+    ) %>%
     select(Outcome, Predictor, Model, Cell_Content)
 }
 
-# ==============================================================================
-# 3. BIND AND PIVOT HORIZONTALLY
-# ==============================================================================
-# ==============================================================================
-# 3. BIND AND PIVOT HORIZONTALLY
-# ==============================================================================
-manuscript_df <- bind_rows(
+#bind rows and create reference row for reference group in interaction
+raw_df <- bind_rows(
   format_with_broom(grim_models, "GrimAge2 Acceleration"),
   format_with_broom(dune_models, "DunedinPACE Pace of Aging")
-) %>% 
-  # Move M1 through M6 to the top headers
+) %>%
   pivot_wider(names_from = Model, values_from = Cell_Content)
 
-# ==============================================================================
-# 4. CREATE THE MANUSCRIPT-QUALITY FLEXTABLE
-# ==============================================================================
-ft <- flextable(manuscript_df) %>% 
-  
-  # FIX: Apply the clean labels directly to the actual wide column names 
-  # that pivot_wider generated (Outcome, Predictor, M1, M2, etc.)
+# Insert the Non-Hispanic White reference row (ref category, no coefficient)
+# It should appear immediately before the 3 interaction contrast rows
+ref_rows <- tibble(
+  Outcome   = c("GrimAge2 Acceleration", "DunedinPACE Pace of Aging"),
+  Predictor = "  × Non-Hispanic White (ref.)",
+  M1 = "", M2 = "", M3 = "", M4 = "", M5 = "", M6 = ""
+)
+
+# Bind and sort so ref row sits above the contrasts, below main effect
+manuscript_df <- bind_rows(raw_df, ref_rows) %>%
+  mutate(
+    Predictor = factor(Predictor, levels = c(
+      "Perceived Cancer Risk (Std.)",
+      "  × Non-Hispanic White (ref.)",
+      "  × Non-Hispanic Black",
+      "  × Hispanic",
+      "  × Non-Hispanic Other"
+    ))
+  ) %>%
+  arrange(Outcome, Predictor) %>%
+  mutate(Predictor = as.character(Predictor))
+
+##flextable
+
+# Each outcome now has 5 rows: 1 main effect + 4 interaction rows
+# Midpoint between the two clocks is after row 5
+
+ft <- flextable(manuscript_df) %>%
+
   set_header_labels(
-    Outcome = "Biological Aging Clock",
+    Outcome   = "Biological Aging Clock",
     Predictor = "Predictor Variable",
-    M1 = "Model 1",
-    M2 = "Model 2",
-    M3 = "Model 3",
-    M4 = "Model 4",
-    M5 = "Model 5",
-    M6 = "Model 6"
-  ) %>% 
-  
-  # Center align all model columns, left align descriptive texts
-  align(j = c("M1", "M2", "M3", "M4", "M5", "M6"), align = "center", part = "all") %>% 
-  align(j = c("Outcome", "Predictor"), align = "left", part = "all") %>% 
-  
-  # Merge duplicate clock text cells vertically
+    M1 = "Model 1", M2 = "Model 2", M3 = "Model 3",
+    M4 = "Model 4", M5 = "Model 5", M6 = "Model 6"
+  ) %>%
+
+  align(j = c("M1","M2","M3","M4","M5","M6"), align = "center", part = "all") %>%
+  align(j = c("Outcome","Predictor"),          align = "left",   part = "all") %>%
+
+  # Merge the Outcome label across its 5 rows
   merge_v(j = "Outcome") %>%
   valign(j = "Outcome", valign = "top") %>%
-  
-  # Apply professional academic typography (Times New Roman, 11pt)
-  font(fontname = "Times New Roman", part = "all") %>% 
-  fontsize(size = 11, part = "all") %>% 
-  bold(part = "header") %>% 
-  
-  # Clean up table borders (Strict APA Layout)
-  border_remove() %>% 
-  hline_top(border = fp_border(color = "black", width = 1.5), part = "header") %>% 
-  hline_bottom(border = fp_border(color = "black", width = 1.5), part = "header") %>% 
-  hline_bottom(border = fp_border(color = "black", width = 1.5), part = "body") %>% 
-  
-  # Since each clock has 2 rows now, the midpoint split is exactly at Row 2
-  hline(i = 2, border = fp_border(color = "gray", width = 0.5), part = "body") %>% 
-  
-  # Replace empty interaction cells in Models 1-5 with a clean dash
-  colformat_char(j = c("M1", "M2", "M3", "M4", "M5"), na_str = "—") %>%
-  
-  # Automatically wrap text to support vertical stacked layout strings
-  valign(valign = "top", part = "body") %>% 
-  autofit() %>% 
-  set_caption(caption = "Table 2. Multi-Model Regressions for Perceived Cancer Risk Predicting Epigenetic Age Acceleration.")
-ft
 
-# ==============================================================================
-# 5. EXPORT DIRECTLY TO WORD
-# ==============================================================================
+  font(fontname = "Times New Roman", part = "all") %>%
+  fontsize(size = 11, part = "all") %>%
+  bold(part = "header") %>%
+
+  #borders
+  border_remove() %>%
+  hline_top(border    = fp_border(color = "black", width = 1.5), part = "header") %>%
+  hline_bottom(border = fp_border(color = "black", width = 1.5), part = "header") %>%
+  hline_bottom(border = fp_border(color = "black", width = 1.5), part = "body") %>%
+
+  # Divider between the two clocks (after row 5)
+  hline(i = 5, border = fp_border(color = "gray", width = 0.5), part = "body") %>%
+
+  # M1–M5 have no interaction terms
+  colformat_char(j = c("M1","M2","M3","M4","M5"), na_str = "") %>%
+
+  valign(valign = "top", part = "body") %>%
+  autofit() %>%
+  set_caption(caption = "Table 4. Multi-Model Regressions for Perceived Cancer Risk Predicting Epigenetic Age Acceleration.")
+
+#formatting (condense)
+ft <- ft %>%
+  # Constrain model columns to a fixed narrow width
+  width(j = c("M1","M2","M3","M4","M5","M6"), width = 0.8) %>%
+  # Constrain descriptor columns
+  width(j = "Outcome",    width = 1.0) %>%
+  width(j = "Predictor",  width = 1.4)
+
+ft
+#export to word
 read_docx() %>% 
   body_add_flextable(ft) %>% 
-  print(target = "manuscript_horizontal_table.docx")
+  print(target = "Output/rafaela_overall_regressions_table.docx")
+
+# ==============================================================================
+#Repeated but models 1-5 now include the race/ethnicity interaction term 
+
+
+m1_grim_i <- lm(grimage2_STD ~ cancerrisk_STD * race_eth
+                   + age + sex + marital,
+                      data = df_mice_completed)
+
+m2_grim_i <- lm(grimage2_STD ~ cancerrisk_STD * race_eth
+                   + age + sex + marital + education + income,
+                      data = df_mice_completed)
+
+m3_grim_i <- lm(grimage2_STD ~ cancerrisk_STD * race_eth
+                   + age + sex + marital + education + income + famcancer,
+                      data = df_mice_completed)
+
+m4_grim_i <- lm(grimage2_STD ~ cancerrisk_STD * race_eth
+                   + age + sex + marital + education + income + famcancer + efficacy,
+                      data = df_mice_completed)
+
+m5_grim_i <- lm(grimage2_STD ~ cancerrisk_STD * race_eth
+                   + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi,
+                      data = df_mice_completed)
+
+
+
+#regression of dunedinpace_STD
+m1_dune_i <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth
+                   + age + sex + marital,
+                      data = df_mice_completed)
+
+m2_dune_i <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth
+                   + age + sex + marital + education + income,
+                      data = df_mice_completed)
+
+m3_dune_i <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth
+                   + age + sex + marital + education + income + famcancer,
+                      data = df_mice_completed)
+
+m4_dune_i <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth
+                   + age + sex + marital + education + income + famcancer + efficacy,
+                      data = df_mice_completed)
+
+m5_dune_i <- lm(dunedinpace_STD ~ cancerrisk_STD * race_eth
+                   + age + sex + marital + education + income + famcancer + efficacy + smoking + alcohol + bmi,
+                      data = df_mice_completed)
+
+#Overall Models (1-5 with interaction) Data Frame:
+grim_models <- list("M1" = m1_grim_i, "M2" = m2_grim_i, "M3" = m3_grim_i, 
+                    "M4" = m4_grim_i, "M5" = m5_grim_i)
+
+dune_models <- list("M1" = m1_dune_i, "M2" = m2_dune_i, "M3" = m3_dune_i, 
+                    "M4" = m4_dune_i, "M5" = m5_dune_i)
+
+format_with_broom <- function(model_list, outcome_label) {
+  
+  #terms for interaction
+  interaction_terms <- c(
+    "cancerrisk_STD:race_ethnon-Hispanic Black",
+    "cancerrisk_STD:race_ethHispanic",
+    "cancerrisk_STD:race_ethnon-Hispanic Other"
+  )
+  
+  model_list %>%
+    map_dfr(~ broom::tidy(.x, conf.int = TRUE), .id = "Model") %>%
+    filter(term %in% c("cancerrisk_STD", interaction_terms)) %>%
+    mutate(
+      Beta    = sprintf("%.3f", estimate),
+      CI      = paste0("[", sprintf("%.2f", conf.low), ", ", sprintf("%.2f", conf.high), "]"),
+      pval    = if_else(p.value < 0.001, "p <0.001",
+                        paste0("p = ", sprintf("%.3f", p.value)),
+                        missing = NA_character_),
+      Outcome   = outcome_label,
+      Predictor = case_match(
+        term,
+        "cancerrisk_STD"                              ~ "Perceived Cancer Risk (Std.)",
+        "cancerrisk_STD:race_ethnon-Hispanic Black"   ~ "  × Non-Hispanic Black",
+        "cancerrisk_STD:race_ethHispanic"             ~ "  × Hispanic",
+        "cancerrisk_STD:race_ethnon-Hispanic Other"   ~ "  × Non-Hispanic Other",
+        .default = term
+      ),
+      # Stack β, CI, p vertically inside each cell
+      Cell_Content = paste(Beta, CI, pval, sep = "\n")
+    ) %>%
+    select(Outcome, Predictor, Model, Cell_Content)
+}
+
+#bind rows and create reference row for reference group in interaction
+raw_df <- bind_rows(
+  format_with_broom(grim_models, "GrimAge2 Acceleration"),
+  format_with_broom(dune_models, "DunedinPACE Pace of Aging")
+) %>%
+  pivot_wider(names_from = Model, values_from = Cell_Content)
+
+# Insert the Non-Hispanic White reference row (ref category, no coefficient)
+# It should appear immediately before the 3 interaction contrast rows
+ref_rows <- tibble(
+  Outcome   = c("GrimAge2 Acceleration", "DunedinPACE Pace of Aging"),
+  Predictor = "  × Non-Hispanic White (ref.)",
+  M1 = "", M2 = "", M3 = "", M4 = "", M5 = ""
+)
+
+# Bind and sort so ref row sits above the contrasts, below main effect
+manuscript_df <- bind_rows(raw_df, ref_rows) %>%
+  mutate(
+    Predictor = factor(Predictor, levels = c(
+      "Perceived Cancer Risk (Std.)",
+      "  × Non-Hispanic White (ref.)",
+      "  × Non-Hispanic Black",
+      "  × Hispanic",
+      "  × Non-Hispanic Other"
+    ))
+  ) %>%
+  arrange(Outcome, Predictor) %>%
+  mutate(Predictor = as.character(Predictor))
+
+##flextable
+
+# Each outcome now has 5 rows: 1 main effect + 4 interaction rows
+
+ft <- flextable(manuscript_df) %>%
+
+  set_header_labels(
+    Outcome   = "Biological Aging Clock",
+    Predictor = "Predictor Variable",
+    M1 = "Model 1", M2 = "Model 2", M3 = "Model 3",
+    M4 = "Model 4", M5 = "Model 5"
+  ) %>%
+
+  align(j = c("M1","M2","M3","M4","M5"), align = "center", part = "all") %>%
+  align(j = c("Outcome","Predictor"),          align = "left",   part = "all") %>%
+
+  # Merge the Outcome label across its 5 rows
+  merge_v(j = "Outcome") %>%
+  valign(j = "Outcome", valign = "top") %>%
+
+  font(fontname = "Times New Roman", part = "all") %>%
+  fontsize(size = 11, part = "all") %>%
+  bold(part = "header") %>%
+
+  #borders
+  border_remove() %>%
+  hline_top(border    = fp_border(color = "black", width = 1.5), part = "header") %>%
+  hline_bottom(border = fp_border(color = "black", width = 1.5), part = "header") %>%
+  hline_bottom(border = fp_border(color = "black", width = 1.5), part = "body") %>%
+
+  # Divider between the two clocks (after row 5)
+  hline(i = 5, border = fp_border(color = "gray", width = 0.5), part = "body") %>%
+
+  # M1–M5 have no interaction terms
+  colformat_char(j = c("M1","M2","M3","M4","M5"), na_str = "") %>%
+
+  valign(valign = "top", part = "body") %>%
+  autofit() %>%
+  set_caption(caption = "Table 5. Multi-Model Regressions for Perceived Cancer Risk Predicting Epigenetic Age Acceleration Including Race/Ethnicity Interaction Term.")
+
+#formatting (condense)
+ft <- ft %>%
+  # Constrain model columns to a fixed narrow width
+  width(j = c("M1","M2","M3","M4","M5"), width = 0.8) %>%
+  # Constrain descriptor columns
+  width(j = "Outcome",    width = 1.0) %>%
+  width(j = "Predictor",  width = 1.4)
+
+ft
+#export to word
+read_docx() %>% 
+  body_add_flextable(ft) %>% 
+  print(target = "Output/rafaela_all_interactions_regressions_table.docx")
+
+
 
 ```
