@@ -24,6 +24,11 @@ library("dplyr")
 library("Hmisc")
 library("modelsummary")
 library("gt")
+library("ggplot2")
+library("ggeffects")
+library(ggsci) # imports jama theme for visual plots
+library(cowplot)
+library(patchwork)
 theme_gtsummary_journal(journal = "jama")
 ```
 
@@ -1323,6 +1328,123 @@ final_table <- flextable(final_df) %>%
   set_caption(
     caption = "Table 4: Overall models with standardized beta coefficients (and 95% confidence intervals) from a series of linear regression models quantifying the association between perceived cancer risk and epigenetic aging among MIDUS II sample"
   ) 
+
+```
+
+# Visualizing regression results
+```{r}
+## Setting overall theme ##
+my_jama_theme <- list(
+  scale_color_jama(),
+  theme_classic(),   # Sets baseline white background & axis lines
+  scale_y_continuous(
+    limits = c(-0.2, 1.4),           # Locks the floor and ceiling of the axis
+    breaks = seq(-0.2, 1.4, by = 0.2) # Places a tick mark every 0.2 units
+  ),
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 0.5),
+    text = element_text(family = "sans", size = 12), 
+    plot.title = element_text(face = "bold", hjust = 0),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold")
+  )
+)
+
+## GrimAge2 Results ##
+
+# Model 4
+target_groups <- c("non-Hispanic White", "non-Hispanic Black", "Hispanic", "non-Hispanic Other")
+ predictions_grim4 <- ggpredict(grim_ov_m4, terms = c("cancerrisk_STD", "race_eth"))
+filtered_predictions_grim4 <- filter(predictions_grim4, group %in% target_groups)
+plot_grim4 <- ggplot(filtered_predictions_grim4, aes(x = x, y = predicted, color = group)) +
+  geom_line(linewidth = 1, alpha = 0.7) +
+  geom_point(size = 3) +
+  labs(
+    x = "Cancer Risk (z-score)",
+    y = "Predicted GrimAge2 (z-score)",
+    color = "Race/Ethnicity"
+  ) +
+  my_jama_theme
+
+
+# Model 5
+predictions_grim5 <- ggpredict(grim_ov_m5, terms = c("cancerrisk_STD", "race_eth"))
+filtered_predictions_grim5 <- filter(predictions_grim5, group %in% target_groups)
+plot_grim5 <- ggplot(filtered_predictions_grim5, aes(x = x, y = predicted, color = group)) +
+  geom_line(linewidth = 1, alpha = 0.7) +
+  geom_point(size = 3) +
+  labs(
+    x = "Cancer Risk (z-score)",
+    y = "Predicted GrimAge2 (z-score)",
+    color = "Race/Ethnicity"
+  ) +
+  my_jama_theme
+
+## DunedinPACE Results ##
+
+# Model 4
+predictions_pace4 <- ggpredict(pace_ov_m4, terms = c("cancerrisk_STD", "race_eth"))
+filtered_predictions_pace4 <- filter(predictions_pace4, group %in% target_groups)
+plot_pace4 <- ggplot(filtered_predictions_pace4, aes(x = x, y = predicted, color = group)) +
+  geom_line(linewidth = 1, alpha = 0.7) +
+  geom_point(size = 3) +
+  labs(
+    x = "Cancer Risk (z-score)",
+    y = "Predicted GrimAge2 (z-score)",
+    color = "Race/Ethnicity"
+  ) +
+  my_jama_theme
+
+# Model 5
+predictions_pace5 <- ggpredict(pace_ov_m5, terms = c("cancerrisk_STD", "race_eth"))
+filtered_predictions_pace5 <- filter(predictions_pace5, group %in% target_groups)
+plot_pace5 <- ggplot(filtered_predictions_pace5, aes(x = x, y = predicted, color = group)) +
+  geom_line(linewidth = 1, alpha = 0.7) +
+  geom_point(size = 3) +
+  labs(
+    x = "Cancer Risk (z-score)",
+    y = "Predicted GrimAge2 (z-score)",
+    color = "Race/Ethnicity"
+  ) +
+  my_jama_theme
+
+# Combining plots using library(patchwork)
+# arranging figures into 2x2 grid
+combined_figure <- (plot_grim4 | plot_grim5) / 
+                   (plot_pace4 | plot_pace5)
+
+# 2. Clean up the legends and add a title
+final_plot <- combined_figure +
+  plot_annotation(tag_levels = "A") + # Labels plots as A, B, C, D
+  plot_layout(guides = "collect") & # Pulls all legends into a single unified legend
+  theme(# Placing unified legend at the bottom
+        legend.position = "bottom",
+        plot.tag = element_text(face = "bold", size = 14, hjust = 0, vjust = 1),
+        legend.margin = margin(t = 0, r = 0, b = 10, l = 0, unit = "pt")) &
+  guides(color = guide_legend(nrow = 2, byrow = TRUE))
+# Print the figure to RStudio viewer
+final_plot
+
+# --- EXPORT INTERMEDIATE SQUARE IMAGE ---
+temp_img_path <- tempfile(fileext = ".png")
+ggsave(filename = temp_img_path, plot = final_plot, width = 7, height = 7.5, dpi = 300)
+
+# --- NATIVE MICROSOFT WORD GENERATION ---
+# Establishing font style
+text_style <- fp_text(font.size = 10, font.family = "Times New Roman")
+# Creating styled paragraph
+formatted_paragraph <- fpar(ftext("Figure 1: Differential association between perceived cancer risk and aging outcomes by race/ethnicity among middle-aged adults, Midlife United States study.", prop = text_style))
+
+doc <- read_docx() %>%
+  # Insert the 4-panel image directly with precise layout dimensions
+  body_add_img(src = temp_img_path, width = 6.0, height = 6.5) %>% #, alignment = "center") %>% 
+  # Add Figure Caption underneath
+  body_add_fpar(formatted_paragraph)
+
+# Save file onto your computer
+print(doc, target = "Output/Ria_Regression_Plots.docx")
 
 ```
 
