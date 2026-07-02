@@ -847,6 +847,7 @@ gtsave(
 ```
 
 
+
 # model 4 figure
 ```{r} 
 #install.packages("ggeffects")
@@ -887,16 +888,16 @@ plot_a <- ggplot(df_plot_grim, aes(x = x, y = predicted, color = group, group = 
   geom_point(size = 3) +
   scale_color_manual(values = color_palette) +
   scale_x_continuous(breaks = -2:2, labels = c("-2", "-1", "0", "1", "2")) + #breaks adds ticks 
-  scale_y_continuous(limits = c(-1.8, 1.8), breaks = seq(-1.5, 1.5, 0.5), labels = c("-1.5", "1.0","0.5", "0.0", "+0.5", "+1.0", "+1.5")) +
+  #scale_y_continuous(limits = c(-1.8, 1.8), breaks = seq(-1.5, 1.5, 0.5), labels = c("-1.5", "1.0","0.5", "0.0", "+0.5", "+1.0", "+1.5")) +
   labs(
     title = "(A)",
     x = "Perceived Cancer Risk (z-score)",
     y = "Predicted GrimAge2 (z-score)"
   ) +
-  theme_bw(base_size = 13) +
+  theme_classic(base_size = 13) +
   theme(
     panel.grid.minor = element_blank(),
-    plot.title = element_text(face = "bold", size = 15),
+    plot.title = element_text(face = "bold", size = 12),
     legend.position = "none" # Hidden on left plot; managed globally by patchwork
   )
 
@@ -910,16 +911,16 @@ plot_b <- ggplot(df_plot_pace, aes(
   geom_point(size = 3) + 
   scale_color_manual(values = color_palette) + 
   scale_x_continuous(breaks = -2:2, labels = c("-2", "-1", "0", "1", "2")) + #breaks adds ticks 
-  scale_y_continuous(limits = c(-1.8, 1.8), breaks = seq(-1.5, 1.5, 0.5), labels = c("-1.5", "-1.0", "-0.5", "0.0", "+0.5", "+1.0", "+1.5")) +
+  #scale_y_continuous(limits = c(-1.8, 1.8), breaks = seq(-1.5, 1.5, 0.5), labels = c("-1.5", "-1.0", "-0.5", "0.0", "+0.5", "+1.0", "+1.5")) +
   labs(
     title = "(B)",
     x = "Perceived Cancer Risk (z-score)",
     y = "Predicted DunedinPACE (z-score)"
   ) +
-  theme_bw(base_size = 13) +
+  theme_classic(base_size = 13) +
   theme(
     panel.grid.minor = element_blank(),
-    plot.title = element_text(face = "bold", size = 15),
+    plot.title = element_text(face = "bold", size = 12),
     legend.position = "right" 
     # Hidden on left plot; managed globally by patchwork
   )
@@ -938,7 +939,7 @@ model_4_figure <- (plot_a + plot_b) +
     theme = theme(
       plot.title = element_text(
         face = "bold", 
-        size = 14,          # Slightly smaller font scales better across dual plots
+        size = 13,          # Slightly smaller font scales better across dual plots
         hjust = 0.5,        # Centers the text
         lineheight = 1.2,   # Adds breathing room between the title lines
         margin = margin(t = 15, b = 15) # Stronger top/bottom padding
@@ -947,7 +948,7 @@ model_4_figure <- (plot_a + plot_b) +
   ) & 
   theme(
     legend.position = "bottom",                          
-    legend.title = element_text(face = "bold", size = 11) 
+    legend.title = element_text(face = "bold", size = 10)
   ) +
   labs(color = "Race / Ethnicity")
 # Display the plot
@@ -956,14 +957,14 @@ model_4_figure
 
 #exporting t workd 
 ggsave(
-  filename = "Output/grace-figure_1_m4.png", 
+  filename = "Output/grace_figure_1_m4.eps", 
   plot = model_4_figure, 
-  device = "png", 
+  device = "eps", 
   dpi = 300,            # 300 DPI is standard print/publication quality
   width = 7.5, 
   height = 4.5, 
   units = "in",
-  bg = "white"          # Ensures background doesn't default to transparent
+  bg = "white" # Ensures background doesn't default to transparent
 )
 
 ```
@@ -999,8 +1000,8 @@ color_palette <- c(
 # 2. PLOT A: GrimAge2 (Model 4 predictions)
 # =========================================================================
 plot_c <- ggplot(df_plot_grim, aes(x = x, y = predicted, color = group, group = group)) +
-  geom_line(linewidth = 1.2) +
-  geom_point(size = 3) +
+  geom_line(linewidth = 1.1) +
+  geom_point(size = 2) +
   scale_color_manual(values = color_palette) +
   scale_x_continuous(breaks = -2:2, labels = c("-2", "-1", "0", "1", "2")) + #breaks adds ticks 
   scale_y_continuous(limits = c(-0.8, 0.8), breaks = seq(-0.5, 0.5, 0.5), labels = c("-0.5", "0.0", "+0.5")) +
@@ -1009,10 +1010,10 @@ plot_c <- ggplot(df_plot_grim, aes(x = x, y = predicted, color = group, group = 
     x = "Perceived Cancer Risk (z-score)",
     y = "Predicted GrimAge2 (z-score)"
   ) +
-  theme_bw(base_size = 13) +
+  theme_classic(base_size = 13) +
   theme(
     panel.grid.minor = element_blank(),
-    plot.title = element_text(face = "bold", size = 15),
+    plot.title = element_text(face = "bold", size = 12),
     legend.position = "none" # Hidden on left plot; managed globally by patchwork
   )
 
@@ -1032,10 +1033,10 @@ plot_d <- ggplot(df_plot_pace, aes(
     x = "Perceived Cancer Risk (z-score)",
     y = "Predicted DunedinPACE (z-score)"
   ) +
-  theme_bw(base_size = 13) +
+  theme_classic(base_size = 13) +
   theme(
     panel.grid.minor = element_blank(),
-    plot.title = element_text(face = "bold", size = 15),
+    plot.title = element_text(face = "bold", size = 12),
     legend.position = "right" 
     # Hidden on left plot; managed globally by patchwork
   )
@@ -1067,7 +1068,7 @@ model_5_figure <- (plot_c + plot_d) +
   ) & 
   theme(
     legend.position = "bottom",                          
-    legend.title = element_text(face = "bold", size = 11) 
+    legend.title = element_text(face = "bold", size = 10) 
   ) +
   labs(color = "Race / Ethnicity")
 # Display the plot
