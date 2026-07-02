@@ -29,11 +29,18 @@ library(misty)
 library(Hmisc) #corr
 library(modelsummary) #overall regression table
 library(naniar)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(patchwork)
 
 
 
 #package used for Latex (knitting to PDF for Mac)
 library(tinytex)
+
+#regression output plots
+library(patchwork)
 
 #data from each column (variable)
 univariate_stats <- midus_data %>% select(grimage2:efficacy_STD)
@@ -622,6 +629,115 @@ ft
 read_docx() %>% 
   body_add_flextable(ft) %>% 
   print(target = "Output/rafaela_all_interactions_regressions_table.docx")
+
+
+
+```
+
+```{r regression plot}
+
+#PREDICTION FUNCTION
+#Uses marginaleffects::predictions() to get predicted values
+#other covariates are kept constant (mean)
+library(marginaleffects)
+
+get_preds <- function(model, outcome_label, model_label) {
+  
+  # Grid: cancerrisk_STD from -2 to 2, all 4 race/eth groups
+  pred_grid <- expand.grid(
+    cancerrisk_STD = seq(-2, 2, by = 1),
+    race_eth = levels(df_mice_completed$race_eth)
+  )
+  
+  preds <- predictions(model, newdata = datagrid(
+    cancerrisk_STD = seq(-2, 2, by = 1),
+    race_eth = levels(df_mice_completed$race_eth)
+  )) %>%
+    as.data.frame() %>%
+    mutate(
+      Outcome = outcome_label,
+      Model   = model_label
+    )
+  
+  return(preds)
+}
+
+#predictions for model 4 and model 5
+preds_all <- bind_rows(
+  get_preds(m4_grim_i, "GrimAge2 Acceleration",      "Model 4"),
+  get_preds(m5_grim_i, "GrimAge2 Acceleration",      "Model 5"),
+  get_preds(m4_dune_i, "DunedinPACE Pace of Aging",  "Model 4"),
+  get_preds(m5_dune_i, "DunedinPACE Pace of Aging",  "Model 5")
+)
+
+#assinging corresponding colors to race levels
+race_colors <- c(
+  "non-Hispanic White" = "#C00000",   # red
+  "non-Hispanic Black" = "#4472C4",  # blue
+  "Hispanic"           = "#70AD47",  # green
+  "non-Hispanic Other" = "#ED7D31"  # orange
+)
+
+#function for making the plot
+make_plot <- function(data, outcome, panel_label) {
+  data %>%
+    filter(Outcome == outcome) %>%
+    ggplot(aes(x = cancerrisk_STD, y = estimate, 
+               color = race_eth, group = race_eth)) +
+    geom_line(linewidth = 0.9) +
+    geom_point(size = 2.5) +
+    facet_wrap(~ Model, ncol = 2) +
+    scale_color_manual(values = race_colors, name = "Race/Ethnicity") +
+    scale_x_continuous(breaks = -2:2) +
+    labs(
+      title = panel_label,
+      x     = "Perceived Cancer Risk (z-score)",
+      y     = "Predicted Outcome (z-score)"
+    ) +
+    theme_classic(base_family = "Arial") +
+    theme(
+      plot.title      = element_text(face = "bold", size = 12),
+      legend.position = "bottom",
+      legend.title    = element_text(size = 10),
+      legend.text     = element_text(size = 9),
+      strip.text      = element_text(face = "bold", size = 11),
+      axis.title      = element_text(size = 10),
+      axis.text       = element_text(size = 9)
+    )
+}
+
+#building plots and combining for comparison
+p_grim <- make_plot(preds_all, "GrimAge2 Acceleration",     "(A) GrimAge2 Acceleration")
+p_dune <- make_plot(preds_all, "DunedinPACE Pace of Aging", "(B) DunedinPACE Pace of Aging")
+
+# Stack vertically with shared legend
+final_plot <- p_grim / p_dune +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+#Save plot as image (ggsave)
+ggsave("interaction_plot_M4_M5.png", final_plot, 
+       width = 8, height = 8, dpi = 300, bg = "white")
+
+#Embed in flextable
+ft_plot <- flextable(data.frame(x = "")) %>%
+  delete_part(part = "header") %>%
+  compose(
+    i = 1, j = 1,
+    value = as_paragraph(
+      as_image(src = "interaction_plot_M4_M5.png", width = 7, height = 7)
+    )
+  ) %>%
+  border_remove() %>%
+  set_caption(caption = "Figure16. Predicted Epigenetic Age Acceleration by Perceived Cancer Risk and Race/Ethnicity (Models 4 and 5).")
+
+doc <- read_docx() %>%
+  body_add_flextable(ft_plot)
+
+print(doc, target = "Output/interaction_plot_M4_M5.docx")
+
 
 
 
