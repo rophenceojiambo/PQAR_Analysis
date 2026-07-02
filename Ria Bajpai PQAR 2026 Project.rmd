@@ -791,7 +791,7 @@ m6_dunedinpace <- lm(
     + smoking
     + alcohol
     + bmi, 
-    data = df_mice_completed) %>%
+    data = df_mice_completed)
 
 ```
 # Trying to include interaction terms within models 1-5
@@ -987,11 +987,11 @@ grimage_wide_1 <- modelsummary(
   gof_omit = ".*",
   add_rows = df_canc_interaction_1
 ) %>% 
-  select(-part) %>%
-  rename(
+select(-part) %>%
+rename(
     GrimAge2_Beta = Est., 
     `GrimAge2_CI` = `({conf.low}, {conf.high})`,
-    `GrimAge2_p-value` = p,
+    `GrimAge2_p-value` = p
   )
 
 
@@ -1076,12 +1076,12 @@ print(doc, target = "Output/ria_interaction_models.docx")
 # Combining dunedin and grimage models into two separate vectors
 dunedin_models <- list(
   m1_dunedinpace, m2_dunedinpace, m3_dunedinpace, 
-  m4_dunedinpace, m5_dunedinpace#, m6_dunedinpace
+  m4_dunedinpace, m5_dunedinpace, m6_dunedinpace
 )
 
 grimage_models <- list(
   m1_grimage2, m2_grimage2, m3_grimage2, 
-  m4_grimage2, m5_grimage2#, m6_grimage2
+  m4_grimage2, m5_grimage2, m6_grimage2
 )
 
 ```
@@ -1339,7 +1339,7 @@ my_jama_theme <- list(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black", linewidth = 0.5),
-    text = element_text(family = "sans", size = 12), 
+    text = element_text(family = "", size = 12), 
     plot.title = element_text(face = "bold", hjust = 0),
     legend.position = "bottom",
     legend.title = element_text(face = "bold")
@@ -1353,24 +1353,23 @@ target_groups <- c("non-Hispanic White", "non-Hispanic Black", "Hispanic", "non-
  predictions_grim4 <- ggpredict(grim_ov_m4, terms = c("cancerrisk_STD", "race_eth"))
 filtered_predictions_grim4 <- filter(predictions_grim4, group %in% target_groups)
 plot_grim4 <- ggplot(filtered_predictions_grim4, aes(x = x, y = predicted, color = group)) +
-  geom_line(linewidth = 1, alpha = 0.7) +
-  geom_point(size = 3) +
+  geom_line(linewidth = 0.5, alpha = 0.7) +
+  geom_point(size = 2) +
   labs(
-    x = "Cancer Risk (z-score)",
+    x = "Perceived Cancer Risk (z-score)",
     y = "Predicted GrimAge2 (z-score)",
     color = "Race/Ethnicity"
   ) +
   my_jama_theme
 
-
-# Model 5
-predictions_grim5 <- ggpredict(grim_ov_m5, terms = c("cancerrisk_STD", "race_eth"))
+target_groups <- c("non-Hispanic White", "non-Hispanic Black", "Hispanic", "non-Hispanic Other")
+ predictions_grim5 <- ggpredict(grim_ov_m5, terms = c("cancerrisk_STD", "race_eth"))
 filtered_predictions_grim5 <- filter(predictions_grim5, group %in% target_groups)
 plot_grim5 <- ggplot(filtered_predictions_grim5, aes(x = x, y = predicted, color = group)) +
-  geom_line(linewidth = 1, alpha = 0.7) +
-  geom_point(size = 3) +
+  geom_line(linewidth = 0.5, alpha = 0.7) +
+  geom_point(size = 2) +
   labs(
-    x = "Cancer Risk (z-score)",
+    x = "Perceived Cancer Risk (z-score)",
     y = "Predicted GrimAge2 (z-score)",
     color = "Race/Ethnicity"
   ) +
@@ -1382,11 +1381,11 @@ plot_grim5 <- ggplot(filtered_predictions_grim5, aes(x = x, y = predicted, color
 predictions_pace4 <- ggpredict(pace_ov_m4, terms = c("cancerrisk_STD", "race_eth"))
 filtered_predictions_pace4 <- filter(predictions_pace4, group %in% target_groups)
 plot_pace4 <- ggplot(filtered_predictions_pace4, aes(x = x, y = predicted, color = group)) +
-  geom_line(linewidth = 1, alpha = 0.7) +
-  geom_point(size = 3) +
+  geom_line(linewidth = 0.5, alpha = 0.7) +
+  geom_point(size = 2) +
   labs(
-    x = "Cancer Risk (z-score)",
-    y = "Predicted GrimAge2 (z-score)",
+    x = "Perceived Cancer Risk (z-score)",
+    y = "Predicted DunedinPACE (z-score)",
     color = "Race/Ethnicity"
   ) +
   my_jama_theme
@@ -1395,22 +1394,44 @@ plot_pace4 <- ggplot(filtered_predictions_pace4, aes(x = x, y = predicted, color
 predictions_pace5 <- ggpredict(pace_ov_m5, terms = c("cancerrisk_STD", "race_eth"))
 filtered_predictions_pace5 <- filter(predictions_pace5, group %in% target_groups)
 plot_pace5 <- ggplot(filtered_predictions_pace5, aes(x = x, y = predicted, color = group)) +
-  geom_line(linewidth = 1, alpha = 0.7) +
-  geom_point(size = 3) +
+  geom_line(linewidth = 0.5, alpha = 0.7) +
+  geom_point(size = 2) +
   labs(
-    x = "Cancer Risk (z-score)",
-    y = "Predicted GrimAge2 (z-score)",
+    x = "Perceived Cancer Risk (z-score)",
+    y = "Predicted DunedinPACE (z-score)",
     color = "Race/Ethnicity"
   ) +
   my_jama_theme
 
 # Combining plots using library(patchwork)
 # arranging figures into 2x2 grid
-combined_figure <- (plot_grim4 | plot_grim5) / 
-                   (plot_pace4 | plot_pace5)
+combined_figure1 <- (plot_grim4 | plot_pace4)
+combined_figure2 <- (plot_grim5 | plot_pace5)
 
-# 2. Clean up the legends and add a title
-final_plot <- combined_figure +
+# 2. Clean up the legends and add a title: Model 4
+final_plot1 <- combined_figure1 +
+  plot_annotation(tag_levels = "A") + # Labels plots as A, B, C, D
+  plot_layout(guides = "collect") & # Pulls all legends into a single unified legend
+  theme(# Placing unified legend at the bottom
+        legend.position = "bottom",
+        plot.tag = element_text(face = "bold", size = 14, hjust = 0, vjust = 1))#,
+        #legend.margin = margin(t = 0, r = 0, b = 10, l = 0, unit = "pt")) &
+  guides(color = guide_legend(nrow = 2, byrow = TRUE))
+# Print the figure to RStudio viewer
+final_plot1
+
+# --- EXPORT INTERMEDIATE SQUARE IMAGE ---
+ggsave(
+  filename = "Output/Ria_M4_plot.eps", 
+  plot = final_plot1, 
+  device = cairo_ps,    # Changed from "eps" to the Cairo PostScript engine
+  width = 7, 
+  height = 7.5
+)
+
+
+# 2. Clean up the legends and add a title: Model 5
+final_plot2 <- combined_figure2 +
   plot_annotation(tag_levels = "A") + # Labels plots as A, B, C, D
   plot_layout(guides = "collect") & # Pulls all legends into a single unified legend
   theme(# Placing unified legend at the bottom
@@ -1418,27 +1439,20 @@ final_plot <- combined_figure +
         plot.tag = element_text(face = "bold", size = 14, hjust = 0, vjust = 1),
         legend.margin = margin(t = 0, r = 0, b = 10, l = 0, unit = "pt")) &
   guides(color = guide_legend(nrow = 2, byrow = TRUE))
+
 # Print the figure to RStudio viewer
-final_plot
+final_plot2
 
 # --- EXPORT INTERMEDIATE SQUARE IMAGE ---
-temp_img_path <- tempfile(fileext = ".png")
-ggsave(filename = temp_img_path, plot = final_plot, width = 7, height = 7.5, dpi = 300)
+ggsave(
+  filename = "Output/Ria_M5_plot.eps", 
+  plot = final_plot1, 
+  device = cairo_ps,    # Changed from "eps" to the Cairo PostScript engine
+  width = 7, 
+  height = 7.5
+)
 
-# --- NATIVE MICROSOFT WORD GENERATION ---
-# Establishing font style
-text_style <- fp_text(font.size = 10, font.family = "Times New Roman")
-# Creating styled paragraph
-formatted_paragraph <- fpar(ftext("Figure 1: Differential association between perceived cancer risk and aging outcomes by race/ethnicity among middle-aged adults, Midlife United States study.", prop = text_style))
-
-doc <- read_docx() %>%
-  # Insert the 4-panel image directly with precise layout dimensions
-  body_add_img(src = temp_img_path, width = 6.0, height = 6.5) %>% #, alignment = "center") %>% 
-  # Add Figure Caption underneath
-  body_add_fpar(formatted_paragraph)
-
-# Save file onto your computer
-print(doc, target = "Output/Ria_Regression_Plots.docx")
-
+## Notes to fix: make sure y-axis lines are auto-adjusted, figure out why it's printing three
+# different plots, and label which one is M4 and M5
 ```
 
