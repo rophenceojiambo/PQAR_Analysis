@@ -140,7 +140,6 @@ mutate(
               missing_stat = "{N_miss} ({p_miss}%)",  # this adds the frequency and % missing
               missing_text = "Missing") %>%  # here you can now use  missing_text = "Missing" if you have coded categorical variables with missing values as Missing, previously it was missing = "ifany" which also shows missing values in continouous variables, and we do not want that.
   modify_caption("Table 1. Overall Descriptive Characteristics of MIDUS Participants") %>%
-  modify_header(label ~ "**Characteristic**") %>%
   bold_labels() 
 
   table1
@@ -217,7 +216,6 @@ table2 <- midus_data %>%
   modify_caption(
     "Table 2. Descriptive Characteristics of MIDUS Participants by Race and Ethnicity"
   ) %>%
-  modify_header(label ~ "**Characteristic**") %>%
   bold_labels()
 
 table2
@@ -293,7 +291,6 @@ table3 <- midus_data %>%
   modify_caption(
     "Table 3. Descriptive Characteristics of MIDUS Participants by Race and Ethnicity"
   ) %>%
-  modify_header(label ~ "**Characteristic**") %>%
   bold_labels()
 
 table3
@@ -313,7 +310,18 @@ table3
   
   table2 %>%
     as_flex_table() %>%
-    autofit() %>%
+     # Forces fixed layout
+    flextable::set_table_properties(layout = "fixed") %>%
+  
+    # Increases width of cells for text-wrapping
+    flextable::width(j = "label", width = 2) %>%
+    
+    # Setting uniform width for other columns
+    flextable::width(j = 2:flextable::ncol_keys(.), width = 0.8) %>%
+  
+    # Shrinking font and padding
+    flextable::fontsize(size = 9, part = "all") %>%
+    flextable::padding(padding.top = 0.5, padding.bottom = 0.5, part = "all") %>%
     flextable::save_as_docx(path = "Output/Ria_table_2_stratified_descriptive_characteristics.docx")
 
   table3_fix <- table3 %>%
@@ -339,9 +347,8 @@ table3
 ```{r}
 # Selecting all numerical data (Don't include chronic conditions in all analysis >> Rophence)
   midus_corr <- midus_data %>% 
-                select("income", "num_chron", "efficacy_STD",
-                      "grimage2_STD", "dunedinpace_STD",
-                      "cancerrisk_STD", "age", "bmi")
+                select("dunedinpace_STD", "grimage2_STD", "cancerrisk_STD",
+                       "efficacy_STD", "income", "age", "bmi")
 
 # Converting midus_corr to a matrix
   midus_matrix <- as.matrix(midus_corr)
@@ -380,7 +387,6 @@ df <- as.data.frame(lower_values)
 # 3. Create the lookup vector for mapping labels
 var_labels <- c(
   "income"          = "Annual Income ($)",
-  "num_chron"       = "Number of Chronic Conditions",
   "efficacy_STD"    = "Self Efficacy",
   "grimage2_STD"    = "GrimAge2",
   "dunedinpace_STD" = "DunedinPACE",
@@ -403,7 +409,6 @@ jama_ft <- flextable(df) %>%
   set_header_labels(
     Variable        = "Variable",                  
     income          = "Annual Income ($)",
-    num_chron       = "Number of Chronic Conditions",
     efficacy_STD    = "Self Efficacy",
     grimage2_STD    = "GrimAge2",
     dunedinpace_STD = "DunedinPACE",
@@ -469,15 +474,6 @@ library(VIM)
 ```{r, eval=FALSE}
 # Set seed for reproducibility
 set.seed(0864)
-
-# Load dataset
-#data_dir  <- file.path(project_dir, "Data")
-#output_dir  <- file.path(project_dir, "Output")
-#analysis_path <- file.path(data_dir, "midus_cancer_aging_analysis_dataset.rds")
-#library(dplyr)
-#midus_data <- readRDS(analysis_path) #Canc_data: data from MIDUS cancer subproject
-#head(midus_data)
-#dim(midus_data)
 ```
 
 
@@ -495,10 +491,7 @@ midus_vars <- midus_data %>%
                      "marital", "education", "grimage2_STD", "dunedinpace_STD",
                      "cancerrisk_STD", "race_eth", "age", "sex",
                      "smoking", "alcohol", "bmi") %>%
-  # Removing row with NA value for grimage2_STD
-  filter(
-    !is.na(grimage2_STD)
-  ) %>%
+
   # Categorical variables should be coded as factors in order to invoke polyreg
   mutate(
       race_eth = factor(race_eth),
@@ -559,7 +552,7 @@ pred_matrix <- mice(midus_vars,
 # Extracting an imputation to print predictor matrix
 print_matrix <- pred_matrix$predictorMatrix
 
-#print_matrix
+print_matrix
 ```
 
 # Adjusting methods
@@ -953,19 +946,20 @@ m5_dunedin_pace <- lm(
 # combining models for dunedin & grimage
 dunedin_models_interact <- list(
   m1_dunedin_pace, m2_dunedin_pace, m3_dunedin_pace, 
-  m4_dunedin_pace, m5_dunedin_pace#, m6_dunedinpace
+  m4_dunedin_pace, m5_dunedin_pace
 )
 
 grimage_models_interact <- list(
     m1_grimage_2, m2_grimage_2, m3_grimage_2,
+    m4_grimage_2, m5_grimage_2
+)
 ```
 
+# Exporting models (with interaction)
 
 ```{r}
-m4_grimage_2, m5_grimage_2#, m6_grimage2
-)
 
-# exporting models into doc
+# Exporting models into doc
 
 # Create dataframe of empty row with model 6 interaction term subheading
 df_canc_interaction_1 <- data.frame(matrix(" ", nrow = 1, ncol = 6))
@@ -1077,7 +1071,7 @@ print(doc, target = "Output/ria_interaction_models.docx")
 
 
 
-# Exporting models as table in word doc
+# Exporting models as table in word doc (without interaction)
 ```{r}
 # Combining dunedin and grimage models into two separate vectors
 dunedin_models <- list(
